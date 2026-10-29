@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 270 64" role="img" aria-labelledby="title">
+  <title id="title">Emulix</title>
+  <defs>
+    <linearGradient id="ld-ix" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#d946ef"/>
+    </linearGradient>
+  </defs>
+  <g>
+  <defs>
+    <linearGradient id="ld-bg" x1="6" y1="2" x2="58" y2="62" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2f7bf5"/>
+      <stop offset="0.55" stop-color="#6b3df0"/>
+      <stop offset="1" stop-color="#c026d3"/>
+    </linearGradient>
+    <radialGradient id="ld-glow" cx="0.88" cy="0.92" r="0.75">
+      <stop offset="0" stop-color="#ff7ab8" stop-opacity="0.6"/>
+      <stop offset="1" stop-color="#ff7ab8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ld-sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="ld-glyph" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#d9e2ff"/>
+    </linearGradient>
+    <radialGradient id="ld-spark" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#fff6bd"/>
+      <stop offset="1" stop-color="#fbbf24"/>
+    </radialGradient>
+    <clipPath id="ld-tile"><rect width="64" height="64" rx="16"/></clipPath>
+  </defs>
+  <g clip-path="url(#ld-tile)">
+    <rect width="64" height="64" fill="url(#ld-bg)"/>
+    <rect width="64" height="64" fill="url(#ld-glow)"/>
+    <rect width="64" height="34" fill="url(#ld-sheen)"/>
+  </g>
+  <rect x="0.5" y="0.5" width="63" height="63" rx="15.5" fill="none" stroke="#fff" stroke-opacity="0.22"/>
+  <g transform="translate(32 32) scale(1) translate(-32 -32)">
+    <g fill="#1a0e5e" fill-opacity="0.3" transform="translate(0 1.6)">
+      <rect x="15" y="14" width="8" height="36" rx="4"/>
+      <rect x="15" y="14" width="30" height="8" rx="4"/>
+      <rect x="15" y="28" width="21" height="8" rx="4"/>
+      <rect x="15" y="42" width="30" height="8" rx="4"/>
+    </g>
+    <g fill="url(#ld-glyph)">
+      <rect x="15" y="14" width="8" height="36" rx="4"/>
+      <rect x="15" y="14" width="30" height="8" rx="4"/>
+      <rect x="15" y="28" width="21" height="8" rx="4"/>
+      <rect x="15" y="42" width="30" height="8" rx="4"/>
+    </g>
+    <circle cx="44.5" cy="32" r="6.6" fill="#fbbf24" fill-opacity="0.24"/>
+    <circle cx="44.5" cy="32" r="3.7" fill="url(#ld-spark)"/>
+  </g>
+</g>
+  <text x="80" y="45" font-family="Geist, Inter, 'Segoe UI', Arial, sans-serif" font-size="40" font-weight="700" letter-spacing="-1.2" fill="#e6e9ef">Emul<tspan fill="url(#ld-ix)">ix</tspan></text>
+</svg>
