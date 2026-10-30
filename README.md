@@ -69,7 +69,9 @@ npm run dev
 ```
 
 Open http://localhost:3000. In development only, a seeded account signs in with the login `admin` and the
-password `admin`. It has Pro so every device can be tested. It is never created in production.
+password `admin`. It has Pro so every device can be tested. A second account, `free` / `free`, is on the Free plan.
+A demo organization for the super admin scenarios (`superadmin`, `alice`, `bob`, `carol`, `dave`, `erin`, each with the
+login as the password) is described in [docs/SUPER_ADMIN.md](docs/SUPER_ADMIN.md). None of these are created in production.
 
 ## Routes
 
@@ -134,4 +136,5 @@ npm run build
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/TASKS.md](docs/TASKS.md), and
 [docs/AUTH_AND_SUBSCRIPTION.md](docs/AUTH_AND_SUBSCRIPTION.md) for the architecture, task checklist,
-and the sign-up, sign-in, subscription, and payment design.
+and the sign-up, sign-in, subscription, and payment design. The Organization plan and the super admin role are in
+[docs/SUPER_ADMIN.md](docs/SUPER_ADMIN.md).

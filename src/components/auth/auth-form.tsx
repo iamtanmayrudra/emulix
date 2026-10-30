@@ -32,7 +32,7 @@ type Props = {
   footer?: ReactNode;
 };
 
-type ApiResponse = { message?: string };
+type ApiResponse = { message?: string; redirectTo?: string };
 
 /** A loose shape check, used only to show a tick. The server decides what is a valid address. */
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -144,7 +144,9 @@ export function AuthForm({ endpoint, fields, submitLabel, hidden, successHref, o
       if (successHref) {
         // Let the devices finish unlocking before the page changes.
         await new Promise((resolve) => setTimeout(resolve, 700));
-        router.push(successHref);
+        // The server can choose a different place, for example for a super admin. Only a path on this site is followed.
+        const target = typeof result.redirectTo === "string" && result.redirectTo.startsWith("/") && !result.redirectTo.startsWith("//") ? result.redirectTo : successHref;
+        router.push(target);
         router.refresh();
         return;
       }

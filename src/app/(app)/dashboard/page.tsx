@@ -16,6 +16,7 @@ import { DashboardSkeleton } from "@/components/skeleton";
 import { getCurrentUser } from "@/lib/auth/runtime";
 import { DEVICES } from "@/lib/device-lab/devices";
 import { canSelectProfile, planForStatus } from "@/lib/entitlements";
+import { effectiveSubscription } from "@/lib/org/runtime";
 import { MOCK_JOBS, MOCK_USAGE, MOCK_USER, PLAN_LIMITS } from "@/lib/mock-data";
 
 const ACTIONS = [
@@ -44,7 +45,7 @@ const ACTIONS = [
 
 async function DashboardPageContent() {
   const user = await getCurrentUser();
-  const subscription = user?.subscription ?? "free";
+  const subscription = user ? effectiveSubscription(user) : "free";
   const plan = planForStatus(subscription);
   const limits = PLAN_LIMITS[plan];
   const recentJobs = MOCK_JOBS.slice(0, 4);

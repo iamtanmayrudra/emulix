@@ -101,8 +101,9 @@ Users can delete their account from the profile page after re-authenticating. De
 | --- | --- | --- | --- |
 | Free | Every signed-in, verified user | None | Basic features only, section 5 |
 | Pro | Users with an active or trialing paid subscription | Not set (plan decision 4) | All Pro features, section 5 |
+| Organization | A company account with a super admin | Not set (plan decision 4) | 4 seats, chosen by the super admin. Specified in [SUPER_ADMIN.md](SUPER_ADMIN.md) |
 
-Only two plans exist at launch. Team or enterprise plans are out of scope for this document.
+Free and Pro are the plans at launch. The Organization plan, its 4-seat rule and the super admin role are specified in [SUPER_ADMIN.md](SUPER_ADMIN.md).
 
 ### 3.2 Subscription states
 

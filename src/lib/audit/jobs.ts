@@ -90,6 +90,18 @@ export function startAuditJob(job: AuditJob): void {
     });
 }
 
+/** Every audit this owner has run, newest first. */
+export function listOwnedAuditJobs(owner: string): AuditJob[] {
+  return [...jobs().values()].filter((job) => job.owner === owner).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/** Removes a finished audit from the owner's history. A running audit stays until it ends. */
+export function deleteOwnedAuditJob(owner: string, id: string): boolean {
+  const job = getOwnedAuditJob(owner, id);
+  if (!job || job.status === "queued" || job.status === "running") return false;
+  return jobs().delete(id);
+}
+
 export function getOwnedAuditJob(owner: string, id: string): AuditJob | null {
   const job = jobs().get(id);
   return job && job.owner === owner ? job : null;

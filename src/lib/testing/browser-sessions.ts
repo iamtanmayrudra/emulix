@@ -4,6 +4,7 @@ import { DEVICE_PROFILES, type DeviceProfile, type Plan } from "@/lib/mock-data"
 import { NAVIGATION_TIMEOUT_MS } from "./runner";
 import { guardPublicRequests } from "./route-guard";
 import { isWebkit, webkitLauncher } from "./webkit-engines";
+import { recordSessionEnd, recordSessionStart } from "@/lib/reports/history";
 import { MAX_URL_LENGTH, parseTargetUrl, resolvesToPublicAddress } from "./url-guard";
 
 /**
@@ -216,6 +217,7 @@ export async function startBrowserSession(input: {
     browser.on("disconnected", () => closeLocal(session));
 
     sessions().set(session.id, session);
+    recordSessionStart({ id: session.id, userId: session.userId, url: session.requestedUrl, profileName: profile.name, startedAt: new Date(session.createdAt).toISOString() });
     session.sweeper = setInterval(() => sweep(session), SWEEP_INTERVAL_MS);
     session.sweeper.unref();
 
@@ -422,6 +424,7 @@ function sweep(session: LiveSession) {
 async function closeLocal(session: LiveSession): Promise<void> {
   if (session.status === "closed") return;
   session.status = "closed";
+  recordSessionEnd(session.id, session.currentUrl, session.title);
   if (session.sweeper) clearInterval(session.sweeper);
   if (session.frameTimer) clearInterval(session.frameTimer);
   sessions().delete(session.id);

@@ -11,6 +11,10 @@ const ctx = vi.hoisted(() => ({ userId: null as string | null, store: null as nu
 vi.mock("../src/lib/auth/runtime", () => ({
   getCurrentUser: vi.fn(async () => (ctx.userId && ctx.store ? ctx.store.findUserById(ctx.userId) : null)),
 }));
+vi.mock("../src/lib/org/runtime", () => ({
+  platformGate: async () => null,
+  getUserAccess: () => ({ kind: "individual" }),
+}));
 vi.mock("../src/lib/auth/store", async (importOriginal) => {
   const original = await importOriginal<typeof import("../src/lib/auth/store")>();
   return { ...original, getAuthStore: () => ctx.store };

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { errorResponse, rateLimited, readJsonBody, stringField } from "@/lib/auth/http";
 import { getCurrentUser } from "@/lib/auth/runtime";
+import { effectiveSubscription, platformGate } from "@/lib/org/runtime";
 import { JobFailure, createTestJob, planForUser, startTestJob, toPublicJob, userJobs } from "@/lib/testing/jobs";
 
 const STATUS_BY_CODE: Record<JobFailure["code"], number> = {
@@ -16,6 +17,8 @@ async function requireUser() {
   if (!user) {
     return { user: null, response: NextResponse.json({ error: "unauthorized", message: "Sign in to run tests." }, { status: 401 }) };
   }
+  const blocked = await platformGate(user, "/api/test-jobs");
+  if (blocked) return { user: null, response: blocked };
   return { user, response: null };
 }
 
@@ -39,7 +42,7 @@ export async function POST(request: Request) {
       url: stringField(body, "url"),
       profileId: stringField(body, "profileId"),
       landscape: body.landscape === true,
-      plan: planForUser(user!.subscription),
+      plan: planForUser(effectiveSubscription(user!)),
     });
     startTestJob(job);
     return NextResponse.json({ job: toPublicJob(job) }, { status: 202 });

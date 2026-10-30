@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { errorResponse, rateLimited, readJsonBody, stringField } from "@/lib/auth/http";
 import { getCurrentUser } from "@/lib/auth/runtime";
+import { effectiveSubscription, platformGate } from "@/lib/org/runtime";
 import { BrowserSessionFailure, startBrowserSession } from "@/lib/testing/browser-sessions";
 import { planForUser } from "@/lib/testing/jobs";
 
@@ -25,6 +26,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "unauthorized", message: "Sign in to open a browser." }, { status: 401 });
   }
 
+  // A super admin controls accounts only, and a member without a seat cannot use the platform. New browsers are refused.
+  const blocked = await platformGate(user, "POST /api/browser-sessions");
+  if (blocked) return blocked;
+
   const limited = rateLimited(`browser-sessions:${user.id}`, MAX_LAUNCHES_PER_HOUR, 60 * 60 * 1000);
   if (limited) return limited;
 
@@ -35,7 +40,7 @@ export async function POST(request: Request) {
       url: stringField(body, "url"),
       profileId: stringField(body, "profileId"),
       landscape: body.landscape === true,
-      plan: planForUser(user.subscription),
+      plan: planForUser(effectiveSubscription(user)),
     });
     return NextResponse.json({ session }, { status: 201 });
   } catch (error) {

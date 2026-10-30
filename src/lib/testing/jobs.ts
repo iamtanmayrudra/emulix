@@ -169,6 +169,15 @@ export function getUserJob(userId: string, jobId: string): TestJob | null {
   return job && job.userId === userId ? job : null;
 }
 
+/** Removes a finished run, and its screenshot, from the user's history. A running test stays until it ends. */
+export function deleteUserJob(userId: string, jobId: string): boolean {
+  const job = getUserJob(userId, jobId);
+  if (!job || job.status === "queued" || job.status === "running") return false;
+  jobs().delete(jobId);
+  if (job.result) void unlink(job.result.screenshotPath).catch(() => undefined);
+  return true;
+}
+
 /** Drops the oldest finished runs (and their screenshots) beyond the per-user limit. */
 function pruneOldJobs(userId: string) {
   const list = userJobs(userId);

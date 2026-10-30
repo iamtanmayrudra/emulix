@@ -248,6 +248,7 @@ export function DeviceLabPicker({ selectedId, plan, url, pageContent, focused = 
                 onSelect={open}
                 onToggleFavorite={toggleFavorite}
                 emptyMessage={emptyMessage}
+                singleColumn={view === "desktop"}
               />
             )}
           </div>

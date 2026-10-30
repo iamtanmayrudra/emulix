@@ -3,21 +3,37 @@ import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 import { MockNotice } from "@/components/mock-notice";
 import { PlanBadge } from "@/components/plan-badge";
+import { ProfileEditor } from "@/components/profile-editor";
 import { ProfileSkeleton } from "@/components/skeleton";
 import { UsageMeter } from "@/components/usage-meter";
 import { getCurrentUser } from "@/lib/auth/runtime";
 import { CARD_BRAND_LABELS } from "@/lib/billing/card";
 import { CYCLE_LABELS, formatMoney } from "@/lib/billing/plans";
 import { planForStatus } from "@/lib/entitlements";
-import { MOCK_USAGE, MOCK_USER, PLAN_LIMITS } from "@/lib/mock-data";
+import { effectiveSubscription, getOrgStore, getUserAccess } from "@/lib/org/runtime";
+import { MOCK_USAGE, PLAN_LIMITS } from "@/lib/mock-data";
 
 const RENEWAL_DATE = new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeZone: "UTC" });
+const STAMP_DATE = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" });
+
+const ACCESS_LABEL = {
+  individual: "Personal account",
+  super_admin: "Super admin",
+  seated: "Member with a seat",
+  no_seat: "Member without a seat",
+  deactivated: "Deactivated",
+} as const;
 
 async function ProfilePageContent() {
   const user = await getCurrentUser();
-  const subscription = user?.subscription ?? "free";
+  const subscription = user ? effectiveSubscription(user) : "free";
+  const inOrganization = user ? getUserAccess(user.id).kind === "seated" : false;
   const plan = planForStatus(subscription);
   const limits = PLAN_LIMITS[plan];
+  const access = user ? getUserAccess(user.id) : { kind: "individual" as const };
+  const orgName = "orgId" in access ? (getOrgStore().getOrg(access.orgId)?.name ?? null) : null;
+  const name = user?.name ?? "Signed-out visitor";
+  const email = user?.email ?? "";
 
   return (
     <div className="space-y-8">
@@ -28,18 +44,73 @@ async function ProfilePageContent() {
       </header>
 
       <section aria-labelledby="account-heading" className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-surface p-5">
-        <Avatar name={MOCK_USER.name} status={subscription} size={72} />
+        <Avatar name={name} status={subscription} size={72} />
         <div className="min-w-0 flex-1">
           <h2 id="account-heading" className="text-lg font-semibold">
-            {MOCK_USER.name}
+            {name}
           </h2>
-          <p className="truncate text-sm text-muted">{MOCK_USER.email}</p>
+          <p className="truncate text-sm text-muted">{email}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
             <PlanBadge plan={plan} />
             <span className="text-muted">Subscription status: {subscription}</span>
+            {user?.emailVerifiedAt ? (
+              <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">Email verified</span>
+            ) : (
+              <span className="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-semibold text-warning">Email not verified</span>
+            )}
           </div>
         </div>
       </section>
+
+      {user && <ProfileEditor name={user.name} email={user.email} />}
+
+      {user && (
+        <section aria-labelledby="details-heading" className="rounded-lg border border-border bg-surface p-5">
+          <h2 id="details-heading" className="text-base font-semibold">
+            Account details
+          </h2>
+          <dl className="mt-4 grid gap-x-8 gap-y-4 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wider text-muted">Full name</dt>
+              <dd className="mt-1 font-medium">{user.name}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wider text-muted">Email</dt>
+              <dd className="mt-1 break-all font-medium">{user.email}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wider text-muted">Member since</dt>
+              <dd className="mt-1 font-medium">{STAMP_DATE.format(user.createdAt)} UTC</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wider text-muted">Last sign-in</dt>
+              <dd className="mt-1 font-medium">{user.lastLoginAt ? `${STAMP_DATE.format(user.lastLoginAt)} UTC` : "This is your first sign-in"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wider text-muted">Account type</dt>
+              <dd className="mt-1 font-medium">{ACCESS_LABEL[access.kind]}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wider text-muted">Account ID</dt>
+              <dd className="mt-1 break-all font-mono text-xs text-muted">{user.id}</dd>
+            </div>
+          </dl>
+        </section>
+      )}
+
+      {orgName && (
+        <section aria-labelledby="org-heading" className="rounded-lg border border-border bg-surface p-5">
+          <h2 id="org-heading" className="text-base font-semibold">
+            Organization
+          </h2>
+          <p className="mt-2 text-sm text-muted">
+            You belong to <span className="font-medium text-foreground">{orgName}</span> as{" "}
+            <span className="font-medium text-foreground">{access.kind === "super_admin" ? "a super admin" : "a member"}</span>.
+            {access.kind === "seated" && " You hold a seat, so you can use the platform."}
+            {access.kind === "no_seat" && " You do not hold a seat yet. Ask your super admin for one."}
+          </p>
+        </section>
+      )}
 
       <section aria-labelledby="usage-heading" className="space-y-5 rounded-lg border border-border bg-surface p-5">
         <h2 id="usage-heading" className="text-base font-semibold">
@@ -53,7 +124,9 @@ async function ProfilePageContent() {
         <h2 id="billing-heading" className="text-base font-semibold">
           Billing
         </h2>
-        {plan === "pro" ? (
+        {inOrganization ? (
+          <p className="text-sm text-muted">Your plan comes from your organization, which includes Pro for every member with a seat. There is nothing to buy.</p>
+        ) : plan === "pro" ? (
           user?.billing ? (
             <dl className="divide-y divide-border text-sm">
               <div className="flex justify-between gap-4 py-2">
@@ -86,7 +159,7 @@ async function ProfilePageContent() {
           </p>
         )}
         <div className="flex flex-wrap items-center gap-3">
-          {plan === "free" ? (
+          {inOrganization ? null : plan === "free" ? (
             <Link
               href="/checkout"
               className="rounded-xl bg-gradient-to-r from-brand-blue via-brand-violet to-brand-fuchsia px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-brand-violet/25 transition hover:-translate-y-0.5"

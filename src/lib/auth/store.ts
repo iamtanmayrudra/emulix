@@ -49,6 +49,8 @@ export interface AuthStore {
   findUserById(id: string): Promise<UserRecord | null>;
   insertUser(user: UserRecord): Promise<void>;
   updateUser(id: string, patch: Partial<UserRecord>): Promise<void>;
+  /** Moves an account to a new email address. Returns false when another account already uses it. */
+  reassignEmail(id: string, email: string): Promise<boolean>;
 
   insertToken(token: TokenRecord): Promise<void>;
   /** Marks a matching, unused, unexpired token as used and returns it. Returns null otherwise. */
@@ -92,6 +94,17 @@ export class MemoryAuthStore implements AuthStore {
   async updateUser(id: string, patch: Partial<UserRecord>) {
     const current = this.users.get(id);
     if (current) this.users.set(id, { ...current, ...patch });
+  }
+
+  async reassignEmail(id: string, email: string) {
+    const current = this.users.get(id);
+    if (!current) return false;
+    const holder = this.usersByEmail.get(email);
+    if (holder && holder !== id) return false;
+    this.usersByEmail.delete(current.email);
+    this.usersByEmail.set(email, id);
+    this.users.set(id, { ...current, email });
+    return true;
   }
 
   async insertToken(token: TokenRecord) {

@@ -30,6 +30,19 @@ export const PRO_FEATURES = [
   "Advanced screenshots, logs and reports",
 ];
 
+/**
+ * Organization plan. Not purchasable yet: it is specified in docs/SUPER_ADMIN.md and its price is not set.
+ * Only this many members of an organization can use the platform at the same time. The super admin chooses who.
+ */
+export const ORG_SEAT_LIMIT = 4;
+
+export const ORG_FEATURES = [
+  `Only ${ORG_SEAT_LIMIT} members of your organization can use Emulix at a time`,
+  "A super admin chooses which members hold the seats, and can swap them any time",
+  "The super admin controls every user account: invite, deactivate, remove and reset access",
+  "Everything in Pro for each member with a seat",
+];
+
 export function priceCents(cycle: BillingCycle): number {
   return cycle === "yearly" ? PRO_PRICING.yearlyCents : PRO_PRICING.monthlyCents;
 }

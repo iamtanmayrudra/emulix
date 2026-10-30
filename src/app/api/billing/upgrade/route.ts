@@ -3,6 +3,7 @@ import { readJsonBody, rateLimited } from "@/lib/auth/http";
 import { getCurrentUser } from "@/lib/auth/runtime";
 import { EMAIL_VERIFICATION_REQUIRED } from "@/lib/auth/policy";
 import { getAuthStore } from "@/lib/auth/store";
+import { getUserAccess, platformGate } from "@/lib/org/runtime";
 import { createOrder, parseCheckoutInput, publicOrder } from "@/lib/billing/checkout";
 
 /**
@@ -19,6 +20,16 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "not_verified", message: "Verify your email before upgrading." },
       { status: 403 },
+    );
+  }
+
+  // Billing is outside what a super admin does, and members of an organization get Pro through it.
+  const blocked = await platformGate(user, "POST /api/billing/upgrade");
+  if (blocked) return blocked;
+  if (getUserAccess(user.id).kind !== "individual") {
+    return NextResponse.json(
+      { error: "org_plan", message: "Your organization plan already includes Pro. There is nothing to buy." },
+      { status: 409 },
     );
   }
 

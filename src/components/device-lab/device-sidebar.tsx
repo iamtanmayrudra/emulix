@@ -77,14 +77,14 @@ export function DeviceSidebar({
               <span className="ml-auto text-xs opacity-75">{platformCounts[platform]}</span>
             </button>
             {active && osVersions.length > 1 && (
-              <div role="group" aria-label="OS version" className="ml-10 mt-1 flex flex-wrap gap-1 pb-1">
+              <div role="group" aria-label="OS version" className="ml-10 mt-1 flex flex-col gap-0.5 pb-1">
                 {[null, ...osVersions].map((version) => (
                   <button
                     key={version ?? "all"}
                     type="button"
                     aria-pressed={osVersion === version}
                     onClick={() => onOsVersionChange(version)}
-                    className={`rounded-[3px] px-2 py-0.5 text-xs ${
+                    className={`w-full rounded-[3px] px-2 py-1 text-left text-xs ${
                       osVersion === version ? "bg-accent/15 font-medium text-accent" : "text-muted hover:text-foreground"
                     }`}
                   >
