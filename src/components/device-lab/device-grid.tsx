@@ -15,6 +15,7 @@ type Props = {
   singleColumn?: boolean;
 };
 
+/** Devices flow down each column and continue into the next one, as in the reference list. */
 export function DeviceGrid({ devices, selectedId, favoriteIds, plan, onSelect, onToggleFavorite, emptyMessage, singleColumn = false }: Props) {
   if (devices.length === 0) {
     return (
@@ -25,9 +26,14 @@ export function DeviceGrid({ devices, selectedId, favoriteIds, plan, onSelect, o
   }
 
   return (
-    <ul aria-label="Devices" className={`grid gap-x-3 gap-y-0.5 ${singleColumn ? "grid-cols-1" : "sm:grid-cols-2 md:grid-cols-3"}`}>
+    // Column count follows the width of the list (not the window), so the list fits beside the category column.
+    <ul
+      aria-label="Devices"
+      className={singleColumn ? "space-y-0.5" : undefined}
+      style={singleColumn ? undefined : { columnWidth: "16rem", columnGap: "1.5rem" }}
+    >
       {devices.map((device) => (
-        <li key={device.id}>
+        <li key={device.id} className="break-inside-avoid pb-0.5">
           <DeviceCard
             device={device}
             selected={device.id === selectedId}

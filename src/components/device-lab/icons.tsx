@@ -159,3 +159,52 @@ export function ChevronRightIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function SwitchIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4 8.5h13l-3-3M20 15.5H7l3 3" />
+    </svg>
+  );
+}
+
+export function PlayIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M10.5 8.8l4.2 3.2-4.2 3.2z" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function StopIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="12" cy="12" r="8.5" />
+      <rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** Browser marks shown on a device row when it is hovered. Colours are the browsers' own. */
+export function ChromeIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" className={className}>
+      <path d="M12 2a10 10 0 0 1 8.66 5H12z" fill="#ea4335" />
+      <path d="M20.66 7a10 10 0 0 1-8.66 15l4.33-7.5z" fill="#34a853" />
+      <path d="M11.34 22A10 10 0 0 1 3.34 7l4.33 7.5z" fill="#fbbc04" />
+      <circle cx="12" cy="12" r="4.4" fill="#fff" />
+      <circle cx="12" cy="12" r="3.1" fill="#4285f4" />
+    </svg>
+  );
+}
+
+export function SafariIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" className={className}>
+      <circle cx="12" cy="12" r="10" fill="#0a84ff" />
+      <path d="M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z" fill="#fff" />
+      <path d="M13.5 13.5l-1.1-1.1-.3.3.3.3z" fill="#ff3b30" />
+    </svg>
+  );
+}

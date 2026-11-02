@@ -416,6 +416,25 @@ body {
   }
 }
 
+/* Charger lead: the connector slides up from below and seats in the device's port. */
+@keyframes cable-plug {
+  0% {
+    transform: translateY(3rem);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.cable-plug {
+  animation: cable-plug 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .beam-spin,
   .twinkle,
@@ -423,7 +442,8 @@ body {
   .scan-line,
   .ring-draw,
   .radar-in,
-  .stage-pulse {
+  .stage-pulse,
+  .cable-plug {
     animation: none;
   }
 }

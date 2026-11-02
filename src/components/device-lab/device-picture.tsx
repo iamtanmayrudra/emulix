@@ -38,13 +38,15 @@ type Props = {
   pageContent?: ReactNode;
   /** Scale factor from the zoom control. 1 is the default size. */
   zoom?: number;
+  /** Shown straight under the device, such as the charger lead before a test starts. */
+  cable?: ReactNode;
 };
 
 /**
  * The device picture. A licensed photo is used when one is supplied. Otherwise iOS devices are drawn as
  * real hardware with a home screen, and other devices get a generic frame with a browser window.
  */
-export function DevicePicture({ device, screen, url, onScreenChange, pageContent, zoom = 1 }: Props) {
+export function DevicePicture({ device, screen, url, onScreenChange, pageContent, zoom = 1, cable }: Props) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const edge = MAX_SCREEN_EDGE * zoom;
   const scale = Math.min(1, edge / device.width, edge / device.height);
@@ -162,6 +164,7 @@ export function DevicePicture({ device, screen, url, onScreenChange, pageContent
   return (
     <figure className="flex flex-col items-center gap-3">
       {picture}
+      {cable}
       <figcaption className="text-xs text-muted">
         {device.name} · {device.width} × {device.height}
       </figcaption>

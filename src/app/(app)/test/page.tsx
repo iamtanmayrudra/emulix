@@ -5,6 +5,7 @@ import { usePlan } from "@/components/plan-context";
 import { BrowserControlsContext, type BrowserControls } from "@/components/device-lab/browser-controls";
 import { BrowserToolbar } from "@/components/device-lab/browser-toolbar";
 import { DeviceLabPicker } from "@/components/device-lab/device-lab-picker";
+import { PlayIcon, StopIcon } from "@/components/device-lab/icons";
 import { LiveBrowser } from "@/components/device-lab/live-browser";
 import { PromotionBanner } from "@/components/device-lab/promotion-banner";
 import { LoadingRegion, Skeleton } from "@/components/skeleton";
@@ -64,6 +65,8 @@ export default function WebsiteTestPage() {
   const [profileId, setProfileId] = useState(DEVICE_PROFILES[0].id);
   const [starred, setStarred] = useState(false);
   const [started, setStarted] = useState(false);
+  /** A device screen is open. With a running test, it makes the page a full-width session instead of a card. */
+  const [deviceOpen, setDeviceOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [upgrade, setUpgrade] = useState<UpgradePrompt | null>(null);
   const [session, setSession] = useState<PublicBrowserSession | null>(null);
@@ -180,23 +183,60 @@ export default function WebsiteTestPage() {
     setStarted(false);
   }
 
+  const sessionMode = started || deviceOpen;
+  const actionClass =
+    "flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium hover:bg-background focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-60";
+  // Start or stop sits at the bottom of the session menu. Two separate buttons, as in the footer, for the reason noted there.
+  const sessionAction = (
+    <>
+      {formError && (
+        <p role="alert" className="px-3 pt-2 text-xs font-medium text-danger">
+          {formError}
+        </p>
+      )}
+      {started ? (
+        <button key="edit" type="button" onClick={handleEdit} disabled={submitting} className={actionClass}>
+          <StopIcon className="h-5 w-5 shrink-0 text-danger" />
+          {submitting ? "Starting…" : "Stop session"}
+        </button>
+      ) : (
+        <button key="start" type="submit" disabled={submitting || restricted} className={actionClass}>
+          <PlayIcon className="h-5 w-5 shrink-0 text-accent" />
+          {submitting ? "Starting…" : restricted ? "Pro device selected" : "Start test"}
+        </button>
+      )}
+    </>
+  );
+
   return (
     <div
       style={WORKSPACE_STYLE}
-      className="relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden p-4 pl-16 md:p-8 md:pl-16"
+      className={
+        sessionMode
+          ? "relative flex h-full min-h-0 w-full overflow-hidden bg-[#dcdcdc] pl-16"
+          : "relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden p-4 pl-16 md:p-8 md:pl-16"
+      }
     >
       <TestSidebar />
 
-      {/* Blurred backdrop */}
-      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-br from-brand-fuchsia via-brand-violet to-brand-blue" />
-      <div aria-hidden="true" className="absolute -left-24 top-16 h-96 w-96 rounded-full bg-brand-blue/60 blur-3xl" />
-      <div aria-hidden="true" className="absolute -right-16 bottom-0 h-96 w-96 rounded-full bg-rose-300/60 blur-3xl" />
+      {/* Blurred backdrop, behind the card. A session page is plain grey. */}
+      {!sessionMode && (
+        <>
+          <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-br from-brand-fuchsia via-brand-violet to-brand-blue" />
+          <div aria-hidden="true" className="absolute -left-24 top-16 h-96 w-96 rounded-full bg-brand-blue/60 blur-3xl" />
+          <div aria-hidden="true" className="absolute -right-16 bottom-0 h-96 w-96 rounded-full bg-rose-300/60 blur-3xl" />
+        </>
+      )}
 
       <form
         onSubmit={handleSubmit}
         noValidate
         aria-labelledby="config-heading"
-        className="relative flex max-h-full w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-surface shadow-2xl"
+        className={
+          sessionMode
+            ? "relative flex h-full w-full min-w-0 flex-col overflow-hidden"
+            : "relative flex max-h-full w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-surface shadow-2xl"
+        }
       >
         <h1 id="config-heading" className="sr-only">
           Website testing
@@ -204,12 +244,14 @@ export default function WebsiteTestPage() {
 
         {!started && (
           <>
-            <PromotionBanner
-              title="Ready to test a page?"
-              message="Pick a device, enter a public address, and start a live browser."
-              ctaLabel="Enter an address"
-              onCta={() => urlInputRef.current?.focus()}
-            />
+            {!sessionMode && (
+              <PromotionBanner
+                title="Ready to test a page?"
+                message="Pick a device, enter a public address, and start a live browser."
+                ctaLabel="Enter an address"
+                onCta={() => urlInputRef.current?.focus()}
+              />
+            )}
 
             <BrowserToolbar
               url={url}
@@ -222,7 +264,7 @@ export default function WebsiteTestPage() {
           </>
         )}
 
-        <div className="min-h-0 flex-1 overflow-auto border-t border-border">
+        <div className={`min-h-0 flex-1 overflow-auto ${sessionMode ? "" : "border-t border-border"}`}>
           <BrowserControlsContext.Provider value={controls}>
             <DeviceLabPicker
               selectedId={profileId}
@@ -237,10 +279,13 @@ export default function WebsiteTestPage() {
               }
               focused={started}
               onSelect={handleSelectDevice}
+              onDeviceOpenChange={setDeviceOpen}
+              sessionAction={sessionAction}
             />
           </BrowserControlsContext.Provider>
         </div>
 
+        {!sessionMode && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-background/60 px-4 py-3">
           <div className="min-w-0 text-sm">
             <p>
@@ -289,6 +334,7 @@ export default function WebsiteTestPage() {
             )}
           </div>
         </div>
+        )}
       </form>
 
       {upgrade && (
