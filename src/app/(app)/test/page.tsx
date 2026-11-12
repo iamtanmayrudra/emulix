@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEven
 import { usePlan } from "@/components/plan-context";
 import { BrowserControlsContext, type BrowserControls } from "@/components/device-lab/browser-controls";
 import { BrowserToolbar } from "@/components/device-lab/browser-toolbar";
+import { BugCapturePanel } from "@/components/device-lab/bug-capture-panel";
 import { DeviceLabPicker } from "@/components/device-lab/device-lab-picker";
 import { PlayIcon, StopIcon } from "@/components/device-lab/icons";
 import { LiveBrowser } from "@/components/device-lab/live-browser";
@@ -14,6 +15,7 @@ import { UpgradeNotice } from "@/components/upgrade-notice";
 import { DEVICES, findDevice, type Device } from "@/lib/device-lab/devices";
 import { canSelectProfile } from "@/lib/entitlements";
 import { DEVICE_PROFILES } from "@/lib/mock-data";
+import type { BugCapture } from "@/lib/testing/bug-report";
 import type { PublicBrowserSession } from "@/lib/testing/browser-sessions";
 
 /**
@@ -70,6 +72,9 @@ export default function WebsiteTestPage() {
   const [submitting, setSubmitting] = useState(false);
   const [upgrade, setUpgrade] = useState<UpgradePrompt | null>(null);
   const [session, setSession] = useState<PublicBrowserSession | null>(null);
+  /** The bug the tester just captured, shown in a panel until it is closed. */
+  const [bug, setBug] = useState<BugCapture | null>(null);
+  const [capturingBug, setCapturingBug] = useState(false);
   /** The address the live page is on, which the browser bars show. */
   const [pageUrl, setPageUrl] = useState(url);
   const urlInputRef = useRef<HTMLInputElement>(null);
@@ -155,14 +160,36 @@ export default function WebsiteTestPage() {
         body: JSON.stringify(body),
       }).catch(() => undefined);
     }
+    async function captureBug() {
+      if (!liveId) return;
+      setCapturingBug(true);
+      setFormError(null);
+      try {
+        const response = await fetch(`/api/browser-sessions/${liveId}/bug`, { method: "POST" });
+        const data = (await response.json().catch(() => ({}))) as ApiError & { capture?: BugCapture };
+        // The tester may have stopped or switched device while the capture ran. Drop a result for a session that is gone.
+        if (sessionRef.current !== liveId) return;
+        if (!response.ok || !data.capture) {
+          setFormError(data.message ?? "The page could not be captured. Try again.");
+          return;
+        }
+        setBug(data.capture);
+      } catch {
+        if (sessionRef.current === liveId) setFormError("Network error. Check your connection and try again.");
+      } finally {
+        setCapturingBug(false);
+      }
+    }
     return {
       live: liveId !== null,
       navigate: (address) => send({ type: "navigate", url: address }),
       back: () => send({ type: "back" }),
       forward: () => send({ type: "forward" }),
       reload: () => send({ type: "reload" }),
+      captureBug: () => void captureBug(),
+      capturingBug,
     };
-  }, [liveId]);
+  }, [liveId, capturingBug]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -336,6 +363,8 @@ export default function WebsiteTestPage() {
         </div>
         )}
       </form>
+
+      {bug && <BugCapturePanel capture={bug} onClose={() => setBug(null)} />}
 
       {upgrade && (
         <UpgradeNotice title={upgrade.title} message={upgrade.message} onDismiss={() => setUpgrade(null)} />

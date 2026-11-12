@@ -38,6 +38,11 @@ Tracks progress against the phases in the [master plan](../website_mobile_testin
 - [x] Website testing runs: URL checks that refuse private and local targets (also on every redirect and
   sub-request), headless Chromium runs with viewport and touch emulation, screenshots, console errors,
   failed and HTTP-error requests, and per-user run history. Source in `src/lib/testing/`.
+- [x] Capture a bug: from a live session, freezes a full-resolution screenshot plus the page's console errors, uncaught
+  errors, failed requests, and HTTP errors (newest 50 of each). The tester adds a title and notes and downloads a
+  Markdown report and the PNG. Nothing is stored on the server. Source: `captureBug` in
+  `src/lib/testing/browser-sessions.ts`, `src/lib/testing/bug-report.ts`, `POST /api/browser-sessions/:id/bug`.
+- [ ] Save captured bugs to the account (reports page) and send them to an issue tracker
 - [ ] Run history persisted in the database and shown on the reports page (reports still use mock data)
 - [ ] Projects
 - [ ] Browser worker with isolation, timeouts, and cleanup

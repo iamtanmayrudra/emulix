@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { chromium, type Browser, type BrowserContext, type CDPSession, type Page } from "playwright";
 import { DEVICE_PROFILES, type DeviceProfile, type Plan } from "@/lib/mock-data";
-import { NAVIGATION_TIMEOUT_MS } from "./runner";
+import type { BugCapture } from "./bug-report";
+import { NAVIGATION_TIMEOUT_MS, type ConsoleEntry, type FailedRequest, type HttpErrorEntry } from "./runner";
 import { guardPublicRequests } from "./route-guard";
 import { isWebkit, webkitLauncher } from "./webkit-engines";
 import { recordSessionEnd, recordSessionStart } from "@/lib/reports/history";
@@ -23,6 +24,9 @@ const WEBKIT_FRAME_INTERVAL_MS = 250;
 const JPEG_QUALITY = 70;
 const MAX_TEXT_LENGTH = 500;
 const MAX_WHEEL_DELTA = 5_000;
+/** Each kind of page evidence keeps the newest entries only, so a noisy page cannot grow a session without limit. */
+const MAX_DIAGNOSTICS = 50;
+const BUG_SCREENSHOT_TIMEOUT_MS = 10_000;
 /** Keys the device may send. Anything else is refused, so the page cannot be driven with arbitrary chords. */
 const ALLOWED_KEYS = new Set([
   "Enter",
@@ -78,11 +82,29 @@ export class BrowserSessionFailure extends Error {
       | "invalid_input"
       | "launch_failed"
       | "not_found"
-      | "input_failed",
+      | "input_failed"
+      | "capture_failed",
     message: string,
   ) {
     super(message);
   }
+}
+
+/** What the page has reported since the session began. Read when the tester captures a bug. */
+type Diagnostics = {
+  consoleMessages: ConsoleEntry[];
+  pageErrors: string[];
+  failedRequests: FailedRequest[];
+  httpErrors: HttpErrorEntry[];
+};
+
+function emptyDiagnostics(): Diagnostics {
+  return { consoleMessages: [], pageErrors: [], failedRequests: [], httpErrors: [] };
+}
+
+function remember<T>(list: T[], entry: T): void {
+  list.push(entry);
+  if (list.length > MAX_DIAGNOSTICS) list.shift();
 }
 
 type LiveSession = {
@@ -108,6 +130,7 @@ type LiveSession = {
   /** WebKit only: takes a screenshot per tick. */
   frameTimer: ReturnType<typeof setInterval> | null;
   capturing: boolean;
+  diagnostics: Diagnostics;
 };
 
 const globalForSessions = globalThis as typeof globalThis & { __emulixBrowserSessions?: Map<string, LiveSession> };
@@ -180,7 +203,10 @@ export async function startBrowserSession(input: {
       acceptDownloads: false,
       serviceWorkers: "block",
     });
-    await guardPublicRequests(context, () => undefined);
+    const diagnostics = emptyDiagnostics();
+    await guardPublicRequests(context, (blockedUrl) =>
+      remember(diagnostics.failedRequests, { url: blockedUrl, reason: "Blocked: non-public address" }),
+    );
 
     const page = await context.newPage();
     const session: LiveSession = {
@@ -204,6 +230,7 @@ export async function startBrowserSession(input: {
       sweeper: null,
       frameTimer: null,
       capturing: false,
+      diagnostics,
     };
     await attachPage(session, page);
     if (engine !== "chromium") {
@@ -257,6 +284,21 @@ async function attachPage(session: LiveSession, page: Page): Promise<void> {
   page.on("framenavigated", (frame) => {
     if (frame === page.mainFrame()) session.currentUrl = page.url();
   });
+  const { diagnostics } = session;
+  page.on("console", (message) => {
+    if (message.type() === "error" || message.type() === "warning") {
+      remember(diagnostics.consoleMessages, { type: message.type(), text: message.text().slice(0, 500) });
+    }
+  });
+  page.on("pageerror", (error) => remember(diagnostics.pageErrors, String(error.stack ?? error.message ?? error).slice(0, 1_000)));
+  page.on("requestfailed", (request) => {
+    const reason = request.failure()?.errorText ?? "failed";
+    // Requests the guard blocked are already recorded by the guard.
+    if (!reason.includes("blockedbyclient")) remember(diagnostics.failedRequests, { url: request.url(), reason });
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 400) remember(diagnostics.httpErrors, { url: response.url(), status: response.status() });
+  });
   page.on("load", () => {
     void page
       .title()
@@ -308,6 +350,46 @@ export function getLatestFrame(
   session.lastActivityAt = Date.now();
   const frame = session.frame && session.frameSeq > after ? { seq: session.frameSeq, data: session.frame } : null;
   return { pageUrl: session.currentUrl, frame };
+}
+
+/**
+ * Freezes the moment a tester spots a bug: a full-resolution screenshot of the page as it is now, plus the errors the page
+ * has reported so far. Throws "not_found" once the session has ended and "capture_failed" if the page cannot be captured.
+ */
+export async function captureBug(userId: string, id: string): Promise<BugCapture> {
+  const session = ownedSession(userId, id);
+  if (!session || session.status !== "live") {
+    throw new BrowserSessionFailure("not_found", "That browser session has ended.");
+  }
+  session.lastActivityAt = Date.now();
+  const { page, diagnostics } = session;
+
+  let image: Buffer;
+  try {
+    image = await page.screenshot({ type: "png", timeout: BUG_SCREENSHOT_TIMEOUT_MS });
+  } catch {
+    throw new BrowserSessionFailure("capture_failed", "The page could not be captured. Try again in a moment.");
+  }
+  // The page may be mid-navigation; the user agent is a nice-to-have, not a reason to lose the capture.
+  const userAgent = await page.evaluate(() => navigator.userAgent).catch(() => "");
+
+  return {
+    capturedAt: new Date().toISOString(),
+    pageUrl: page.url(),
+    pageTitle: session.title,
+    device: {
+      name: session.profile.name,
+      viewport: session.viewport,
+      landscape: session.landscape,
+      engine: session.profile.engine ?? "chromium",
+    },
+    userAgent,
+    consoleMessages: [...diagnostics.consoleMessages],
+    pageErrors: [...diagnostics.pageErrors],
+    failedRequests: [...diagnostics.failedRequests],
+    httpErrors: [...diagnostics.httpErrors],
+    screenshot: `data:image/png;base64,${image.toString("base64")}`,
+  };
 }
 
 export function validateBrowserInput(value: unknown): { ok: true; input: BrowserInput } | { ok: false; reason: string } {

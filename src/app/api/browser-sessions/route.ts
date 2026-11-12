@@ -18,6 +18,7 @@ const STATUS_BY_CODE: Record<BrowserSessionFailure["code"], number> = {
   launch_failed: 503,
   not_found: 404,
   input_failed: 409,
+  capture_failed: 409,
 };
 
 export async function POST(request: Request) {

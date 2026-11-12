@@ -9,6 +9,10 @@ export type BrowserControls = {
   back: () => void;
   forward: () => void;
   reload: () => void;
+  /** Freezes the page as a bug report: screenshot plus console and network evidence. */
+  captureBug: () => void;
+  /** True while a capture is in progress, so the menu cannot start a second one. */
+  capturingBug: boolean;
 };
 
 const NO_CONTROLS: BrowserControls = {
@@ -17,6 +21,8 @@ const NO_CONTROLS: BrowserControls = {
   back: () => undefined,
   forward: () => undefined,
   reload: () => undefined,
+  captureBug: () => undefined,
+  capturingBug: false,
 };
 
 export const BrowserControlsContext = createContext<BrowserControls>(NO_CONTROLS);

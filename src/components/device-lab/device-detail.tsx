@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { DevicePicture, type AppScreen } from "@/components/device-lab/device-picture";
+import { useBrowserControls } from "@/components/device-lab/browser-controls";
 import { browsersFor } from "@/components/device-lab/device-card";
 import {
   ChevronRightIcon,
@@ -114,6 +115,7 @@ function ChargerCable() {
  * is testing on at the right. On iOS, Chrome and Safari open from the device's own home screen.
  */
 export function DeviceDetail({ selected, plan, url, screen, onScreenChange, onOpenDevices, action, pageContent }: Props) {
+  const controls = useBrowserControls();
   const [zoom, setZoom] = useState(1);
   const [collapsed, setCollapsed] = useState(false);
   // The menu can be dragged by its header. The offset is kept from the drag start, so it moves smoothly.
@@ -216,7 +218,13 @@ export function DeviceDetail({ selected, plan, url, screen, onScreenChange, onOp
               </button>
             </div>
           </MenuItem>
-          <MenuItem icon={ReportIcon} label="Capture a bug" soon />
+          {/* Needs a live page to capture, so it stays dimmed until the test has started. */}
+          <MenuItem
+            icon={ReportIcon}
+            label={controls.capturingBug ? "Capturing…" : "Capture a bug"}
+            disabled={!controls.live || controls.capturingBug}
+            onClick={controls.captureBug}
+          />
           <MenuItem icon={CodeIcon} label="DevTools" soon />
           <MenuItem icon={PhoneIcon} label="Show home screen" disabled={selected.platform !== "ios" || screen === "home"} onClick={() => onScreenChange("home")} />
           <MenuItem icon={GridIcon} label="Rotate device" soon />
