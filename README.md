@@ -48,7 +48,7 @@ These are decisions for the project owner. Nothing here is chosen yet.
 
 ### AI features (optional)
 
-Set these in `.env.local` (ignored by git), then restart `npm run dev`:
+Set these in `.env` or `.env.local` (both ignored by git; `.env.example` is the template), then restart `npm run dev`:
 
 | Variable | Purpose |
 | --- | --- |
