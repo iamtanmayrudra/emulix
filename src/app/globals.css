@@ -447,3 +447,68 @@ body {
     animation: none;
   }
 }
+
+/*
+ * Chrome DevTools look for the test page's DevTools panel. Scoped to .devtools so the app's own tokens are untouched.
+ * Like Chrome's default setting, it follows the OS light or dark preference and not the app's theme.
+ */
+.devtools {
+  --dt-bg: #ffffff;
+  --dt-toolbar: #f1f3f4;
+  --dt-border: #cacdd1;
+  --dt-text: #202124;
+  --dt-text-2: #5f6368;
+  --dt-accent: #1a73e8;
+  --dt-hover: rgb(0 0 0 / 0.06);
+  --dt-stripe: #f8f9fa;
+  --dt-selected: #d3e3fd;
+  --dt-selected-text: #041e49;
+  --dt-error-bg: #fff0f0;
+  --dt-error-border: #ffd6d6;
+  --dt-error-text: #c5221f;
+  --dt-warning-bg: #fffbe5;
+  --dt-warning-border: #fff5c2;
+  --dt-warning-text: #5c3c00;
+  --dt-warning-icon: #e8a600;
+  --dt-info: #1a73e8;
+  --dt-ok: #188038;
+  --dt-bar: #4c8bf5;
+  --dt-mono: Menlo, "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  .devtools {
+    --dt-bg: #202124;
+    --dt-toolbar: #292a2d;
+    --dt-border: #3c4043;
+    --dt-text: #e8eaed;
+    --dt-text-2: #9aa0a6;
+    --dt-accent: #8ab4f8;
+    --dt-hover: rgb(255 255 255 / 0.08);
+    --dt-stripe: #26272a;
+    --dt-selected: #394457;
+    --dt-selected-text: #e8eaed;
+    --dt-error-bg: #290000;
+    --dt-error-border: #5c0000;
+    --dt-error-text: #ff8080;
+    --dt-warning-bg: #332a00;
+    --dt-warning-border: #5c4c00;
+    --dt-warning-text: #ffdd9e;
+    --dt-warning-icon: #fbbc04;
+    --dt-info: #8ab4f8;
+    --dt-ok: #81c995;
+    --dt-bar: #8ab4f8;
+    color-scheme: dark;
+  }
+}
+
+.devtools .dt-mono {
+  font-family: var(--dt-mono);
+}
+
+/* Chrome's thin scrollbars. */
+.devtools .dt-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--dt-border) transparent;
+}

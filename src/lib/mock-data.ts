@@ -62,10 +62,10 @@ export const MOCK_USER = {
 
 export const PLAN_LIMITS: Record<
   Plan,
-  { auditsPerPeriod: number; apkUploadsPerPeriod: number; apkMaxSizeMb: number }
+  { auditsPerPeriod: number; apkUploadsPerPeriod: number; apkMaxSizeMb: number; aiCreditsPerPeriod: number }
 > = {
-  free: { auditsPerPeriod: 5, apkUploadsPerPeriod: 2, apkMaxSizeMb: 50 },
-  pro: { auditsPerPeriod: 100, apkUploadsPerPeriod: 50, apkMaxSizeMb: 300 },
+  free: { auditsPerPeriod: 5, apkUploadsPerPeriod: 2, apkMaxSizeMb: 50, aiCreditsPerPeriod: 10 },
+  pro: { auditsPerPeriod: 100, apkUploadsPerPeriod: 50, apkMaxSizeMb: 300, aiCreditsPerPeriod: 300 },
 };
 
 export const MOCK_USAGE = { auditsUsed: 3, apkUploadsUsed: 0 };

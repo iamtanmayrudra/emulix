@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import { useEffect, useId, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import type { AuditResult, FormFactor } from "@/lib/audit/summary";
 
 /** Icons are 24-unit outlines drawn in white on a gradient tile. */
@@ -315,90 +315,121 @@ function fixListMarkdown(result: AuditResult): string {
 /** One finding: the problem, where it was found, and what to change, with a code example and the guide. */
 function FindingCard({ finding, index }: { finding: Finding; index: number }) {
   const { solution } = finding;
+  const [open, setOpen] = useState(index === 0);
+  const panelId = useId();
   return (
     <li
       style={delay(index * 40)}
       className={`dash-rise relative overflow-hidden rounded-xl border border-border/70 bg-surface shadow-sm transition before:absolute before:inset-y-0 before:left-0 before:w-1 hover:shadow-md ${PRIORITY_CLASS[finding.priority].edge}`}
     >
-      <details open={index === 0} className="group">
-        <summary className="flex cursor-pointer list-none items-center gap-2.5 px-4 py-2.5 pl-5 [&::-webkit-details-marker]:hidden">
+      <div>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen((value) => !value)}
+          className="flex w-full cursor-pointer items-center gap-2.5 px-4 py-2.5 pl-5 text-left transition-colors hover:bg-background/60 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+        >
           <span className={`inline-flex w-[4.25rem] shrink-0 justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${PRIORITY_CLASS[finding.priority].pill}`}>
             {finding.priority}
           </span>
           <span className="min-w-0 flex-1 text-sm font-medium leading-snug sm:truncate">{finding.title}</span>
           {finding.impact && <span className="hidden rounded-full bg-background px-2 py-0.5 text-[11px] font-medium text-muted sm:inline">{finding.impact}</span>}
-          <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-muted transition group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            className={`h-4 w-4 shrink-0 text-muted transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
             <path d="M6 9l6 6 6-6" />
           </svg>
-        </summary>
+        </button>
 
-        <div className="grid gap-4 border-t border-border/70 bg-gradient-to-br from-emerald-400/5 via-transparent to-sky-400/5 p-4 pl-5 lg:grid-cols-2">
-          <div className="min-w-0 space-y-3">
-            {finding.detail && <p className="text-sm text-muted">{finding.detail}</p>}
-            {finding.evidence.length > 0 && (
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Found on</p>
-                <ul className="mt-1.5 space-y-1">
-                  {finding.evidence.map((item) => (
-                    <li key={item} className="break-all rounded-md bg-background px-2.5 py-1 font-mono text-[11px]">
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+        {/*
+          The panel animates its height by moving a grid row between 0fr and 1fr, which needs no measured height and works in
+          every browser. While closed it is inert, so the links and buttons inside cannot be reached by keyboard.
+        */}
+        <div
+          id={panelId}
+          inert={!open}
+          className={`grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+            open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+          }`}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div className="grid gap-4 border-t border-border/70 bg-gradient-to-br from-emerald-400/5 via-transparent to-sky-400/5 p-4 pl-5 lg:grid-cols-2">
+              <div className="min-w-0 space-y-3">
+                {finding.detail && <p className="text-sm text-muted">{finding.detail}</p>}
+                {finding.evidence.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Found on</p>
+                    <ul className="mt-1.5 space-y-1">
+                      {finding.evidence.map((item) => (
+                        <li key={item} className="break-all rounded-md bg-background px-2.5 py-1 font-mono text-[11px]">
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {solution.example && (
+                  <div className="overflow-hidden rounded-lg border border-border/70">
+                    <div className="flex items-center justify-between gap-2 bg-background px-2.5 py-1">
+                      <span className="font-mono text-[11px] uppercase text-muted">Example · {solution.example.language}</span>
+                      <CopyButton text={solution.example.code} label="Copy" small />
+                    </div>
+                    <pre className="max-h-44 overflow-auto bg-[#0b1220] p-3 text-[11px] leading-relaxed text-slate-100">
+                      <code>{solution.example.code}</code>
+                    </pre>
+                  </div>
+                )}
               </div>
-            )}
-            {solution.example && (
-              <div className="overflow-hidden rounded-lg border border-border/70">
-                <div className="flex items-center justify-between gap-2 bg-background px-2.5 py-1">
-                  <span className="font-mono text-[11px] uppercase text-muted">Example · {solution.example.language}</span>
-                  <CopyButton text={solution.example.code} label="Copy" small />
-                </div>
-                <pre className="max-h-44 overflow-auto bg-[#0b1220] p-3 text-[11px] leading-relaxed text-slate-100">
-                  <code>{solution.example.code}</code>
-                </pre>
-              </div>
-            )}
-          </div>
 
-          <div className="min-w-0 space-y-3">
-            <div className="rounded-lg border border-emerald-500/25 bg-gradient-to-br from-emerald-400/10 to-sky-400/5 p-3">
-              <p className="flex items-center gap-2 text-sm font-semibold text-success">
-                <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center rounded-full bg-success/15">
-                  <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 13l4 4L19 7" />
-                  </svg>
-                </span>
-                How to fix
-              </p>
-              <p className="mt-1.5 text-sm">{solution.summary}</p>
-              <ol className="mt-2 space-y-1.5 text-sm">
-                {solution.steps.map((step, stepIndex) => (
-                  <li key={step} className="flex gap-2.5">
-                    <span aria-hidden="true" className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-success text-[10px] font-bold text-white">
-                      {stepIndex + 1}
+              <div className="min-w-0 space-y-3">
+                <div className="rounded-lg border border-emerald-500/25 bg-gradient-to-br from-emerald-400/10 to-sky-400/5 p-3">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-success">
+                    <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center rounded-full bg-success/15">
+                      <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
                     </span>
-                    <span className="min-w-0">{step}</span>
-                  </li>
-                ))}
-              </ol>
+                    How to fix
+                  </p>
+                  <p className="mt-1.5 text-sm">{solution.summary}</p>
+                  <ol className="mt-2 space-y-1.5 text-sm">
+                    {solution.steps.map((step, stepIndex) => (
+                      <li key={step} className="flex gap-2.5">
+                        <span aria-hidden="true" className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-success text-[10px] font-bold text-white">
+                          {stepIndex + 1}
+                        </span>
+                        <span className="min-w-0">{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+                {finding.docsUrl && (
+                  <a
+                    href={finding.docsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline focus-visible:outline-2 focus-visible:outline-accent"
+                  >
+                    Read the full guide
+                    <span className="sr-only">(opens in a new tab)</span>
+                    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M7 17L17 7M8 7h9v9" />
+                    </svg>
+                  </a>
+                )}
+              </div>
             </div>
-            {finding.docsUrl && (
-              <a
-                href={finding.docsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline focus-visible:outline-2 focus-visible:outline-accent"
-              >
-                Read the full guide
-                <span className="sr-only">(opens in a new tab)</span>
-                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M7 17L17 7M8 7h9v9" />
-                </svg>
-              </a>
-            )}
           </div>
         </div>
-      </details>
+      </div>
     </li>
   );
 }

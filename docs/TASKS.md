@@ -42,6 +42,19 @@ Tracks progress against the phases in the [master plan](../website_mobile_testin
   errors, failed requests, and HTTP errors (newest 50 of each). The tester adds a title and notes and downloads a
   Markdown report and the PNG. Nothing is stored on the server. Source: `captureBug` in
   `src/lib/testing/browser-sessions.ts`, `src/lib/testing/bug-report.ts`, `POST /api/browser-sessions/:id/bug`.
+- [x] DevTools (Pro only): the session menu's DevTools item opens a Chrome-style panel for the live page: a Console tab
+  (level menu, filter, source `file:line`, collapsible stack traces) and a Network tab (type filters, Name/Status/Type/
+  Size/Time/Waterfall columns, a Headers pane with the General section, and a requests/transferred/finish status bar).
+  It follows the OS light or dark setting, can be resized by dragging its top edge, and shows the newest 200 console
+  messages and requests. Not in it: Elements, Sources, other tabs, request and response headers or bodies, the
+  initiator column, and a console prompt. A Free account sees a "Pro" badge and the
+  upgrade prompt instead. The plan is checked on the server for every read, so the panel cannot be switched on from the
+  browser alone. Source: `src/lib/testing/devtools.ts`, `GET /api/browser-sessions/:id/devtools`,
+  `src/components/device-lab/devtools-panel.tsx`.
+- [x] AI phase 1 ([AI_FEATURES.md](AI_FEATURES.md)): foundation in `src/lib/ai/` (provider, redaction, monthly credits, cache),
+  "Draft with AI" in the bug capture panel (`POST /api/ai/bug-draft`) and "Explain" on failing DevTools rows
+  (`POST /api/ai/explain`). Needs `ANTHROPIC_API_KEY`. Not yet done: the AI allowance in the dashboard and profile usage
+  meters, and the pricing-page copy.
 - [ ] Save captured bugs to the account (reports page) and send them to an issue tracker
 - [ ] Run history persisted in the database and shown on the reports page (reports still use mock data)
 - [ ] Projects

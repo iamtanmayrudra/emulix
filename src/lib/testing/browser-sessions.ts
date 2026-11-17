@@ -1,8 +1,21 @@
 import { randomUUID } from "node:crypto";
-import { chromium, type Browser, type BrowserContext, type CDPSession, type Page } from "playwright";
+import { chromium, type Browser, type BrowserContext, type CDPSession, type Page, type Request } from "playwright";
 import { DEVICE_PROFILES, type DeviceProfile, type Plan } from "@/lib/mock-data";
 import type { BugCapture } from "./bug-report";
 import { NAVIGATION_TIMEOUT_MS, type ConsoleEntry, type FailedRequest, type HttpErrorEntry } from "./runner";
+import {
+  addConsoleEntry,
+  addRequest,
+  completeRequest,
+  createDevtoolsLog,
+  failRequest,
+  readDevtools,
+  setRequestSize,
+  sourceFromStack,
+  type DevtoolsLog,
+  type DevtoolsRequest,
+  type DevtoolsSnapshot,
+} from "./devtools";
 import { guardPublicRequests } from "./route-guard";
 import { isWebkit, webkitLauncher } from "./webkit-engines";
 import { recordSessionEnd, recordSessionStart } from "@/lib/reports/history";
@@ -131,6 +144,8 @@ type LiveSession = {
   frameTimer: ReturnType<typeof setInterval> | null;
   capturing: boolean;
   diagnostics: Diagnostics;
+  /** Everything the page logged and requested, for the Pro DevTools panel. */
+  devtools: DevtoolsLog;
 };
 
 const globalForSessions = globalThis as typeof globalThis & { __emulixBrowserSessions?: Map<string, LiveSession> };
@@ -231,6 +246,7 @@ export async function startBrowserSession(input: {
       frameTimer: null,
       capturing: false,
       diagnostics,
+      devtools: createDevtoolsLog(),
     };
     await attachPage(session, page);
     if (engine !== "chromium") {
@@ -284,19 +300,43 @@ async function attachPage(session: LiveSession, page: Page): Promise<void> {
   page.on("framenavigated", (frame) => {
     if (frame === page.mainFrame()) session.currentUrl = page.url();
   });
-  const { diagnostics } = session;
+  const { diagnostics, devtools } = session;
+  // The DevTools panel shows every request, so each one is tracked from start to finish.
+  const tracked = new WeakMap<Request, DevtoolsRequest>();
+  page.on("request", (request) => {
+    tracked.set(request, addRequest(devtools, { method: request.method(), url: request.url(), resourceType: request.resourceType() }));
+  });
   page.on("console", (message) => {
+    // Chrome reports line numbers from zero, and the panel shows them from one, as Chrome does.
+    addConsoleEntry(devtools, message.type(), message.text(), message.location());
     if (message.type() === "error" || message.type() === "warning") {
       remember(diagnostics.consoleMessages, { type: message.type(), text: message.text().slice(0, 500) });
     }
   });
-  page.on("pageerror", (error) => remember(diagnostics.pageErrors, String(error.stack ?? error.message ?? error).slice(0, 1_000)));
+  page.on("pageerror", (error) => {
+    const detail = String(error.stack ?? error.message ?? error);
+    addConsoleEntry(devtools, "exception", detail, sourceFromStack(detail));
+    remember(diagnostics.pageErrors, detail.slice(0, 1_000));
+  });
+  page.on("requestfinished", (request) => {
+    const entry = tracked.get(request);
+    if (!entry) return;
+    // Sizes are best effort: an engine may not report them, and the page may close first.
+    void request
+      .sizes()
+      .then((sizes) => setRequestSize(devtools, entry, sizes.responseBodySize + sizes.responseHeadersSize))
+      .catch(() => undefined);
+  });
   page.on("requestfailed", (request) => {
     const reason = request.failure()?.errorText ?? "failed";
+    const entry = tracked.get(request);
+    if (entry) failRequest(devtools, entry, reason);
     // Requests the guard blocked are already recorded by the guard.
     if (!reason.includes("blockedbyclient")) remember(diagnostics.failedRequests, { url: request.url(), reason });
   });
   page.on("response", (response) => {
+    const entry = tracked.get(response.request());
+    if (entry) completeRequest(devtools, entry, response.status());
     if (response.status() >= 400) remember(diagnostics.httpErrors, { url: response.url(), status: response.status() });
   });
   page.on("load", () => {
@@ -350,6 +390,20 @@ export function getLatestFrame(
   session.lastActivityAt = Date.now();
   const frame = session.frame && session.frameSeq > after ? { seq: session.frameSeq, data: session.frame } : null;
   return { pageUrl: session.currentUrl, frame };
+}
+
+/**
+ * The page's console and network log for the DevTools panel. Returns null when nothing changed since `after`, the version
+ * the caller already has. Plan checks belong to the caller; throws "not_found" once the session has ended.
+ */
+export function getDevtools(userId: string, id: string, after: number): DevtoolsSnapshot | null {
+  const session = ownedSession(userId, id);
+  if (!session || session.status !== "live") {
+    throw new BrowserSessionFailure("not_found", "That browser session has ended.");
+  }
+  // Reading the log counts as activity, so an open panel keeps its session from timing out as idle.
+  session.lastActivityAt = Date.now();
+  return readDevtools(session.devtools, after);
 }
 
 /**

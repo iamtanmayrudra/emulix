@@ -41,17 +41,30 @@ type MenuItemProps = {
   label: string;
   /** Tools that are not built yet are listed, dimmed and marked, so the menu keeps its full shape. */
   soon?: boolean;
+  /** A short tag at the end of the row, such as "On" or "Pro". */
+  badge?: string;
+  /** For a row that switches something on and off. */
+  pressed?: boolean;
   disabled?: boolean;
   onClick?: () => void;
   children?: ReactNode;
 };
 
-function MenuItem({ icon: Icon, label, soon = false, disabled = false, onClick, children }: MenuItemProps) {
+function MenuItem({ icon: Icon, label, soon = false, badge, pressed, disabled = false, onClick, children }: MenuItemProps) {
   const content = (
     <>
       <Icon className="h-5 w-5 shrink-0 text-accent" />
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {soon && <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted">Soon</span>}
+      {badge && (
+        <span
+          className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+            pressed ? "bg-success/15 text-success" : "bg-pro/15 text-pro"
+          }`}
+        >
+          {badge}
+        </span>
+      )}
     </>
   );
   return (
@@ -62,6 +75,7 @@ function MenuItem({ icon: Icon, label, soon = false, disabled = false, onClick, 
           <button
             type="button"
             disabled={soon || disabled}
+            aria-pressed={pressed}
             onClick={onClick}
             className="flex w-full items-center gap-3 rounded-[3px] py-1 text-left text-sm enabled:hover:text-accent disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-accent"
           >
@@ -225,7 +239,14 @@ export function DeviceDetail({ selected, plan, url, screen, onScreenChange, onOp
             disabled={!controls.live || controls.capturingBug}
             onClick={controls.captureBug}
           />
-          <MenuItem icon={CodeIcon} label="DevTools" soon />
+          {/* Pro only. A Free account can press it, and is shown the upgrade prompt; the data itself is checked on the server. */}
+          <MenuItem
+            icon={CodeIcon}
+            label="DevTools"
+            pressed={controls.devtoolsOn}
+            badge={controls.devtoolsAllowed ? (controls.devtoolsOn ? "On" : "Off") : "Pro"}
+            onClick={controls.toggleDevtools}
+          />
           <MenuItem icon={PhoneIcon} label="Show home screen" disabled={selected.platform !== "ios" || screen === "home"} onClick={() => onScreenChange("home")} />
           <MenuItem icon={GridIcon} label="Rotate device" soon />
           <MenuItem icon={GaugeIcon} label="Throttle network" soon />

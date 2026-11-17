@@ -6,6 +6,7 @@ import { BrowserControlsContext, type BrowserControls } from "@/components/devic
 import { BrowserToolbar } from "@/components/device-lab/browser-toolbar";
 import { BugCapturePanel } from "@/components/device-lab/bug-capture-panel";
 import { DeviceLabPicker } from "@/components/device-lab/device-lab-picker";
+import { DevtoolsPanel } from "@/components/device-lab/devtools-panel";
 import { PlayIcon, StopIcon } from "@/components/device-lab/icons";
 import { LiveBrowser } from "@/components/device-lab/live-browser";
 import { PromotionBanner } from "@/components/device-lab/promotion-banner";
@@ -75,6 +76,8 @@ export default function WebsiteTestPage() {
   /** The bug the tester just captured, shown in a panel until it is closed. */
   const [bug, setBug] = useState<BugCapture | null>(null);
   const [capturingBug, setCapturingBug] = useState(false);
+  /** The DevTools panel is open. It is a Pro feature, so this only ever turns on for a Pro account. */
+  const [devtoolsOn, setDevtoolsOn] = useState(false);
   /** The address the live page is on, which the browser bars show. */
   const [pageUrl, setPageUrl] = useState(url);
   const urlInputRef = useRef<HTMLInputElement>(null);
@@ -150,6 +153,15 @@ export default function WebsiteTestPage() {
     }
   }
 
+  const devtoolsAllowed = plan === "pro";
+  const devtoolsVisible = devtoolsAllowed && devtoolsOn;
+
+  /** The server refused the log, for example because the subscription has ended since the page loaded. */
+  function handleDevtoolsPlanRequired(message: string) {
+    setDevtoolsOn(false);
+    setUpgrade({ title: "DevTools needs Pro", message });
+  }
+
   const liveId = liveSession?.id ?? null;
   const controls = useMemo<BrowserControls>(() => {
     function send(body: Record<string, unknown>) {
@@ -188,8 +200,21 @@ export default function WebsiteTestPage() {
       reload: () => send({ type: "reload" }),
       captureBug: () => void captureBug(),
       capturingBug,
+      devtoolsOn: devtoolsVisible,
+      // Pro accounts switch the panel on and off. A Free account is offered the upgrade instead.
+      toggleDevtools: () => {
+        if (devtoolsAllowed) {
+          setDevtoolsOn((value) => !value);
+        } else {
+          setUpgrade({
+            title: "DevTools needs Pro",
+            message: "Upgrade to Pro to inspect the page's console and network requests while you test.",
+          });
+        }
+      },
+      devtoolsAllowed,
     };
-  }, [liveId, capturingBug]);
+  },[liveId, capturingBug, devtoolsVisible, devtoolsAllowed]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -311,6 +336,15 @@ export default function WebsiteTestPage() {
             />
           </BrowserControlsContext.Provider>
         </div>
+
+        {devtoolsVisible && (
+          <DevtoolsPanel
+            key={liveId ?? "no-session"}
+            sessionId={liveId}
+            onClose={() => setDevtoolsOn(false)}
+            onPlanRequired={handleDevtoolsPlanRequired}
+          />
+        )}
 
         {!sessionMode && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-background/60 px-4 py-3">

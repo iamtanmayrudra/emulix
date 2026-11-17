@@ -30,6 +30,7 @@ Storage, email, billing, and APK testing are still stand-ins. See [Services](#se
 | Verification and reset emails | Development mailer that prints each email to the server console | Stand-in. No email provider chosen. |
 | Billing and checkout | Simulated checkout: card checks run in the browser, and the upgrade call only changes the plan | Stand-in. No payment provider chosen. |
 | Plans and limits | Own rules (Free: 1 live browser, Pro: 5) | Real rules, placeholder numbers |
+| AI bug drafts and "Explain" in DevTools | Anthropic Messages API, called from `src/lib/ai/`. Needs `ANTHROPIC_API_KEY`; without it the AI buttons say AI is not set up. Monthly credits are counted in memory. | Real calls, in-memory credit counts (see [docs/AI_FEATURES.md](docs/AI_FEATURES.md)) |
 | Dashboard jobs and usage | Sample data in `src/lib/mock-data.ts` | Stand-in |
 | APK testing | UI only. Nothing runs an Android emulator or device. | Not built |
 | Device photos | Two CC0 frames (iPhone SE, iPad Air). Every other device is drawn in code. | Mixed |
@@ -44,6 +45,16 @@ These are decisions for the project owner. Nothing here is chosen yet.
 - **Hosting that can run browsers** (heavy and long-lived), with a job queue.
 - An **Android emulator or device farm** for APK testing.
 - **Shared rate limiting**, such as Redis. It is kept in process memory now.
+
+### AI features (optional)
+
+Set these in `.env.local` (ignored by git), then restart `npm run dev`:
+
+| Variable | Purpose |
+| --- | --- |
+| `ANTHROPIC_API_KEY` | Turns the AI features on. Never commit it. |
+| `AI_TEXT_MODEL` | Model for explanations. Default `claude-haiku-5-5`. |
+| `AI_VISION_MODEL` | Model for bug drafts that read a screenshot. Default `claude-sonnet-5-5`. |
 
 ## Getting started
 

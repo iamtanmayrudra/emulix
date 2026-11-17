@@ -34,8 +34,27 @@ export default function PrivacyPage() {
           body: (
             <p>
               A browser on our server loads the page you enter and streams its picture to you. Audit results are kept in server memory for your
-              results screen and are cleared when the server restarts. We do not sell or share what you test.
+              results screen and are cleared when the server restarts. We do not sell what you test, and we share it only when you choose an AI
+              feature, as described next.
             </p>
+          ),
+        },
+        {
+          title: "AI features",
+          body: (
+            <>
+              <p>
+                Some tools can draft a bug report or explain a console message or network request. They run only when you click them. Then we send
+                the evidence for that one request to our AI provider (Anthropic) so it can write the answer: the errors and requests from your
+                test, the device name, and, for a bug draft, the screenshot.
+              </p>
+              <p>
+                Before sending, we shorten addresses (the query string and any credentials are removed) and mask passwords, tokens and email
+                addresses in text. We cannot mask what appears inside a screenshot, so do not draft a bug while a page shows private details.
+                We do not store the evidence or the answer on our side beyond a short-lived cache in server memory, and the answer is only
+                shown to you. AI answers can be wrong, so check them against the evidence.
+              </p>
+            </>
           ),
         },
         {

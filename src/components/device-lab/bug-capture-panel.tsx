@@ -1,6 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { postAi } from "@/lib/ai/client";
+import type { AiErrorBody, AiUsage, BugDraftResponse } from "@/lib/ai/types";
 import {
   MAX_BUG_DESCRIPTION_LENGTH,
   MAX_BUG_TITLE_LENGTH,
@@ -13,6 +16,15 @@ type Props = {
   capture: BugCapture;
   onClose: () => void;
 };
+
+type DraftState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "done"; usage: AiUsage }
+  | { status: "error"; error: AiErrorBody };
+
+/** Larger screenshots are left out of the AI request; the server would drop them anyway. */
+const MAX_AI_SCREENSHOT_LENGTH = 4_000_000;
 
 function saveFile(href: string, filename: string) {
   const link = document.createElement("a");
@@ -35,6 +47,7 @@ const buttonClass =
 export function BugCapturePanel({ capture, onClose }: Props) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [draft, setDraft] = useState<DraftState>({ status: "idle" });
   const dialogRef = useRef<HTMLDivElement>(null);
 
   // Put focus back where it was, so keyboard users land on the menu again after closing.
@@ -50,6 +63,21 @@ export function BugCapturePanel({ capture, onClose }: Props) {
     ["Failed requests", capture.failedRequests.length],
     ["HTTP errors", capture.httpErrors.length],
   ];
+
+  /** Asks the server for a draft and fills the title and description with it. The tester reviews it before downloading. */
+  async function draftWithAi(fresh: boolean) {
+    setDraft({ status: "loading" });
+    const screenshot = capture.screenshot.length > MAX_AI_SCREENSHOT_LENGTH ? undefined : capture.screenshot;
+    const result = await postAi<BugDraftResponse>("/api/ai/bug-draft", { capture: { ...capture, screenshot }, fresh });
+    if (!result.ok) {
+      setDraft({ status: "error", error: result.error });
+      return;
+    }
+    const { draft: drafted, usage } = result.data;
+    setTitle(drafted.title.slice(0, MAX_BUG_TITLE_LENGTH));
+    setDescription(`**Severity:** ${drafted.severity}\n\n${drafted.description}`.slice(0, MAX_BUG_DESCRIPTION_LENGTH));
+    setDraft({ status: "done", usage });
+  }
 
   function saveBlob(blob: Blob, filename: string) {
     const url = URL.createObjectURL(blob);
@@ -145,6 +173,43 @@ export function BugCapturePanel({ capture, onClose }: Props) {
                 className={`${fieldClass} resize-y`}
               />
             </label>
+
+            <div className="mt-2 rounded-[3px] border border-border bg-background p-2.5 text-xs">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void draftWithAi(draft.status === "done")}
+                  disabled={draft.status === "loading"}
+                  className={`${buttonClass} disabled:opacity-60`}
+                >
+                  {draft.status === "loading" ? "Drafting…" : draft.status === "done" ? "Regenerate with AI" : "Draft with AI"}
+                </button>
+                <span className="text-muted">Fills the title and description above. This replaces what you have typed.</span>
+              </div>
+              <p className="mt-1.5 text-muted">
+                Sends the screenshot and the errors below, with addresses shortened, to the AI provider. Nothing is stored.
+              </p>
+              <div aria-live="polite">
+                {draft.status === "done" && (
+                  <p className="mt-1.5 font-medium">
+                    AI-generated draft. Check it against the evidence before you download.{" "}
+                    <span className="font-normal text-muted">
+                      {draft.usage.used} of {draft.usage.limit} AI requests used this month.
+                    </span>
+                  </p>
+                )}
+                {draft.status === "error" && (
+                  <p role="alert" className="mt-1.5 font-medium text-danger">
+                    {draft.error.message}{" "}
+                    {draft.error.upgradeUrl && (
+                      <Link href={draft.error.upgradeUrl} className="underline">
+                        Upgrade to Pro
+                      </Link>
+                    )}
+                  </p>
+                )}
+              </div>
+            </div>
 
             <dl className="mt-4 space-y-1.5 border-y border-border py-3 text-xs">
               {[

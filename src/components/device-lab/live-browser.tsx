@@ -177,20 +177,23 @@ export function LiveBrowser({ sessionId, label, onPageUrl }: Props) {
       aria-label={`Live browser: ${label}. Click, scroll, and type to use the page.`}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className="absolute inset-0 flex items-center justify-center bg-white focus-visible:outline-2 focus-visible:outline-accent"
+      className="absolute inset-0 overflow-hidden bg-white focus-visible:outline-2 focus-visible:outline-accent"
     >
       {ended ? (
-        <p role="status" className="p-4 text-center text-xs text-neutral-500">
+        <p role="status" className="flex h-full items-center justify-center p-4 text-center text-xs text-neutral-500">
           This browser session has ended. Start a test again to reconnect.
         </p>
       ) : frameUrl ? (
+        // The frame is the device's full viewport, which is taller than the page area between the browser's bars. It fills
+        // the width and is anchored to the top, so there are no bands at the sides. The lower part is reached by scrolling,
+        // as on a real phone. Not object-contain: that would shrink the page to fit the height and leave gaps.
         // eslint-disable-next-line @next/next/no-img-element -- frames are object URLs from our own API
         <img
           ref={imageRef}
           src={frameUrl}
           alt=""
           draggable={false}
-          className="max-h-full max-w-full select-none object-contain"
+          className="block h-auto w-full max-w-none select-none"
         />
       ) : (
         <LoadingRegion label={`Loading ${label}`} className="flex h-full w-full flex-col gap-3 bg-white p-4">

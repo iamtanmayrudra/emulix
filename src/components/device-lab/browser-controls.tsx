@@ -13,6 +13,12 @@ export type BrowserControls = {
   captureBug: () => void;
   /** True while a capture is in progress, so the menu cannot start a second one. */
   capturingBug: boolean;
+  /** The DevTools panel is on. Only Pro accounts can turn it on. */
+  devtoolsOn: boolean;
+  /** Turns the panel on or off. On a Free account it shows the upgrade prompt instead. */
+  toggleDevtools: () => void;
+  /** False on a Free account, so the menu can mark DevTools as a Pro feature. */
+  devtoolsAllowed: boolean;
 };
 
 const NO_CONTROLS: BrowserControls = {
@@ -23,6 +29,9 @@ const NO_CONTROLS: BrowserControls = {
   reload: () => undefined,
   captureBug: () => undefined,
   capturingBug: false,
+  devtoolsOn: false,
+  toggleDevtools: () => undefined,
+  devtoolsAllowed: false,
 };
 
 export const BrowserControlsContext = createContext<BrowserControls>(NO_CONTROLS);

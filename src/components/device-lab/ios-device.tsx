@@ -72,12 +72,12 @@ export function IosDevice({ category, width, height, screen, url, onScreenChange
   const bezel = isTablet ? width * 0.032 : width * 0.05;
   const radius = isTablet ? width * 0.075 : width * 0.155;
   const sideButton = (style: CSSProperties) => (
-    <span aria-hidden="true" className="absolute rounded-sm bg-gradient-to-b from-neutral-300 to-neutral-500" style={style} />
+    <span aria-hidden="true" className="absolute rounded-sm bg-gradient-to-b from-neutral-700 to-neutral-900" style={style} />
   );
 
   return (
     <div
-      className="relative shrink-0 bg-gradient-to-b from-neutral-300 via-neutral-500 to-neutral-400 shadow-2xl ring-1 ring-black/40"
+      className="relative shrink-0 bg-gradient-to-b from-neutral-800 via-black to-neutral-900 shadow-2xl ring-1 ring-black/60"
       style={{ padding: px(bezel), borderRadius: px(radius + bezel) }}
     >
       {!isTablet && (
