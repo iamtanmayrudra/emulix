@@ -1,0 +1,166 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e99]:
+    - banner [ref=e100]:
+      - generic [ref=e101]:
+        - link "Emulix dashboard" [ref=e102] [cursor=pointer]:
+          - /url: /dashboard
+          - generic [ref=e103]: Emulix
+        - navigation "Main" [ref=e123]:
+          - link "Dashboard" [ref=e124] [cursor=pointer]:
+            - /url: /dashboard
+          - link "Website testing" [ref=e125] [cursor=pointer]:
+            - /url: /test
+          - link "APK testing" [ref=e126] [cursor=pointer]:
+            - /url: /apk
+          - link "Optimization" [ref=e127] [cursor=pointer]:
+            - /url: /optimize
+          - link "Reports" [ref=e128] [cursor=pointer]:
+            - /url: /reports
+          - link "Profile & billing" [ref=e129] [cursor=pointer]:
+            - /url: /profile
+        - generic [ref=e130]:
+          - button "Invite team" [ref=e132] [cursor=pointer]
+          - link [ref=e136] [cursor=pointer]:
+            - /url: /pricing
+          - button "Help" [disabled] [ref=e140]
+          - button "Notifications" [ref=e145] [cursor=pointer]
+          - button "Search" [disabled] [ref=e149]
+          - button "Profile settings" [ref=e154] [cursor=pointer]:
+            - img "Admin, Pro plan" [ref=e155]:
+              - generic [aria-hidden] [ref=e156]: A
+    - main [ref=e157]:
+      - generic [ref=e159]:
+        - region "Welcome back, Demo User" [ref=e160]:
+          - generic [ref=e165]:
+            - paragraph [ref=e166]: Device lab · Pro plan
+            - heading "Welcome back, Demo User" [level=1] [ref=e168]
+            - paragraph [ref=e169]: 37 of 37 real browsers and devices are ready for you. Open a live page on a phone, tablet or Mac, and see exactly what your visitors see.
+            - generic [ref=e170]:
+              - link "Test a URL" [ref=e171] [cursor=pointer]:
+                - /url: /test
+              - link "Run an audit" [ref=e174] [cursor=pointer]:
+                - /url: /optimize
+        - region "At a glance" [ref=e204]:
+          - generic [ref=e205]:
+            - generic [ref=e212]:
+              - paragraph [ref=e213]: "4"
+              - paragraph [ref=e214]: Tests run
+            - paragraph [ref=e215]: Website, audit and APK jobs
+          - generic [ref=e216]:
+            - generic [ref=e223]:
+              - paragraph [ref=e224]: "2"
+              - paragraph [ref=e225]: Completed
+            - paragraph [ref=e226]: 50% finished without errors
+          - generic [ref=e227]:
+            - generic [ref=e233]:
+              - paragraph [ref=e234]: 37/37
+              - paragraph [ref=e235]: Devices ready
+            - paragraph [ref=e236]: Every device unlocked
+          - generic [ref=e237]:
+            - generic [ref=e244]:
+              - paragraph [ref=e245]: "97"
+              - paragraph [ref=e246]: Audits left
+            - paragraph [ref=e247]: of 100 this period
+        - region "Jump in" [ref=e248]:
+          - heading "Jump in" [level=2] [ref=e249]
+          - generic [ref=e250]:
+            - link [ref=e251] [cursor=pointer]:
+              - /url: /test
+              - generic [ref=e258]:
+                - heading "Test a URL" [level=3] [ref=e259]
+                - paragraph [ref=e260]: Open any public page in a live browser on a phone, tablet or Mac.
+              - generic [ref=e261]: Open
+            - link [ref=e264] [cursor=pointer]:
+              - /url: /apk
+              - generic [ref=e270]:
+                - heading "Upload an APK" [level=3] [ref=e271]
+                - paragraph [ref=e272]: Check how an Android build looks and behaves on a device.
+              - generic [ref=e273]: Open
+            - link [ref=e276] [cursor=pointer]:
+              - /url: /optimize
+              - generic [ref=e283]:
+                - heading "Run an audit" [level=3] [ref=e284]
+                - paragraph [ref=e285]: Get a Lighthouse report on speed, accessibility and SEO.
+              - generic [ref=e286]: Open
+        - generic [ref=e289]:
+          - region "Recent jobs" [ref=e290]:
+            - generic [ref=e291]:
+              - heading "Recent jobs" [level=2] [ref=e292]
+              - link "View all" [ref=e293] [cursor=pointer]:
+                - /url: /reports
+            - list [ref=e296]:
+              - listitem [ref=e297]:
+                - generic [ref=e302]:
+                  - paragraph [ref=e303]: https://example.com
+                  - paragraph [ref=e304]: Website test · iPhone 14 · 2026-10-14 16:20
+                - generic [ref=e305]: Completed
+              - listitem [ref=e306]:
+                - generic [ref=e311]:
+                  - paragraph [ref=e312]: https://example.com/pricing
+                  - paragraph [ref=e313]: Audit · Desktop 1280 · 2026-10-14 11:05
+                - generic [ref=e314]: Completed
+              - listitem [ref=e315]:
+                - generic [ref=e319]:
+                  - paragraph [ref=e320]: sample-app.apk
+                  - paragraph [ref=e321]: APK test · Pixel 7, Android (version TBD) · 2026-10-13 09:42
+                - generic [ref=e322]: Rejected
+              - listitem [ref=e323]:
+                - generic [ref=e328]:
+                  - paragraph [ref=e329]: https://example.org/login
+                  - paragraph [ref=e330]: Website test · Pixel 7 · 2026-10-12 18:10
+                - generic [ref=e331]: Timed out
+          - generic [ref=e332]:
+            - region "Usage this period" [ref=e333]:
+              - heading "Usage this period" [level=2] [ref=e334]
+              - generic [ref=e335]:
+                - progressbar "Audits" [ref=e336]:
+                  - generic [ref=e340]: 3%
+                - generic [ref=e341]:
+                  - paragraph [ref=e342]: Audits
+                  - paragraph [ref=e343]: 3 of 100 used
+              - generic [ref=e344]:
+                - progressbar "APK uploads" [ref=e345]:
+                  - generic [ref=e349]: 0%
+                - generic [ref=e350]:
+                  - paragraph [ref=e351]: APK uploads
+                  - paragraph [ref=e352]: 0 of 50 used
+            - region "Device coverage" [ref=e353]:
+              - heading "Device coverage" [level=2] [ref=e354]
+              - generic [ref=e355]:
+                - img "iOS 16, Android 13, Desktop 8" [ref=e356]
+                - list [ref=e360]:
+                  - listitem [ref=e361]:
+                    - generic [ref=e366]:
+                      - generic [ref=e367]: "16"
+                      - generic [ref=e368]: iOS
+                  - listitem [ref=e369]:
+                    - generic [ref=e377]:
+                      - generic [ref=e378]: "13"
+                      - generic [ref=e379]: Android
+                  - listitem [ref=e380]:
+                    - generic [ref=e385]:
+                      - generic [ref=e386]: "8"
+                      - generic [ref=e387]: Desktop
+        - note [ref=e388]:
+          - strong [ref=e389]: Mock data.
+          - text: Jobs and usage on this screen are sample data until the backend is connected.
+    - contentinfo [ref=e390]:
+      - generic [ref=e391]:
+        - paragraph [ref=e392]: Emulix · Test and optimize on real devices
+        - navigation "Footer" [ref=e393]:
+          - list [ref=e394]:
+            - listitem [ref=e395]:
+              - link "How it works" [ref=e396] [cursor=pointer]:
+                - /url: /how-it-works
+            - listitem [ref=e397]:
+              - link "Plans" [ref=e398] [cursor=pointer]:
+                - /url: /pricing
+            - listitem [ref=e399]:
+              - link "Terms" [ref=e400] [cursor=pointer]:
+                - /url: /terms
+            - listitem [ref=e401]:
+              - link "Privacy" [ref=e402] [cursor=pointer]:
+                - /url: /privacy
+  - 'button "Theme: System. Switch to Light" [ref=e66] [cursor=pointer]'
+  - button "Open Next.js Dev Tools" [ref=e75] [cursor=pointer]
+  - alert [ref=e79]: Welcome back, Demo User

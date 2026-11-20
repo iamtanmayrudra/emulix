@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   reactCompiler: true,
+  experimental: {
+    agentUpgrade: "security",
+  },
   // Playwright and Lighthouse drive a browser binary and must not be bundled into server code.
   serverExternalPackages: ["playwright", "lighthouse", "playwright-webkit-15", "playwright-webkit-16", "playwright-webkit-17", "playwright-webkit-18"],
   turbopack: {

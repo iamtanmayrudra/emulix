@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { InviteDialog } from "@/components/admin/invite-dialog";
 import { Logo } from "@/components/logo";
 import { SignOutButton } from "@/components/sign-out-button";
 import { SiteFooter } from "@/components/site-footer";
@@ -18,6 +19,7 @@ const NAV = [
  */
 export function AdminShell({ userName, orgName, children }: { userName: string; orgName: string; children: ReactNode }) {
   const pathname = usePathname();
+  const [inviting, setInviting] = useState(false);
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 bg-chrome text-chrome-foreground">
@@ -42,6 +44,18 @@ export function AdminShell({ userName, orgName, children }: { userName: string; 
             })}
           </nav>
           <div className="flex shrink-0 items-center gap-1 py-2 text-sm sm:gap-3">
+            <button
+              type="button"
+              onClick={() => setInviting(true)}
+              className="flex h-9 items-center gap-2 rounded-md px-2.5 text-sm font-medium text-white/90 transition hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-accent"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                <circle cx="9.5" cy="8" r="3.5" />
+                <path d="M3 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6" />
+              </svg>
+              <span className="hidden sm:inline">Invite team</span>
+              <span className="sr-only sm:hidden">Invite team</span>
+            </button>
             <span className="hidden text-right leading-tight sm:block">
               <span className="block font-medium">{userName}</span>
               <span className="block text-xs text-white/70">{orgName}</span>
@@ -54,6 +68,7 @@ export function AdminShell({ userName, orgName, children }: { userName: string; 
         <div className="mx-auto w-full max-w-6xl">{children}</div>
       </main>
       <SiteFooter />
+      {inviting && <InviteDialog onClose={() => setInviting(false)} />}
     </div>
   );
 }

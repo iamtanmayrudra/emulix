@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "lighthouse": "13.5.0",
-    "next": "16.4.1",
+    "next": "16.4.6",
     "playwright": "^1.64.1",
     "playwright-webkit-15": "npm:playwright-core@1.23.4",
     "playwright-webkit-16": "npm:playwright-core@1.30.0",
@@ -29,7 +29,7 @@
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.4.1",
+    "eslint-config-next": "16.4.6",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^3.2.7"

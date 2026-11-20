@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import type { MemberList, MemberRow } from "@/lib/org/types";
+import { INVITED_EVENT } from "./invite-dialog";
 
 type Dialog =
   | { type: "password"; title: string; body: string; confirmLabel: string; danger?: boolean; run: (password: string) => Promise<string | null> }
@@ -277,6 +278,18 @@ export function UsersAdmin({ initial, selfId }: { initial: MemberList; selfId: s
     setInviting(false);
   }
 
+  // An invitation sent from the header's "Invite team" dialog refreshes this list too.
+  useEffect(() => {
+    function onInvited(event: Event) {
+      const email = (event as CustomEvent<{ email?: string }>).detail?.email;
+      setNotice(email ? `Invitation sent to ${email}.` : "Invitation sent.");
+      setError(null);
+      void reload();
+    }
+    window.addEventListener(INVITED_EVENT, onInvited);
+    return () => window.removeEventListener(INVITED_EVENT, onInvited);
+  }, []);
+
   // The menu is placed from the button's position, so scrolling or resizing closes it instead of leaving it behind.
   useEffect(() => {
     if (!menu) return;
@@ -469,7 +482,7 @@ export function UsersAdmin({ initial, selfId }: { initial: MemberList; selfId: s
 
       {menu && data.members.some((member) => member.id === menu.id) && (
         <>
-          <button type="button" aria-label="Close menu" className="fixed inset-0 z-30 cursor-default" onClick={() => setMenu(null)} />
+          <button type="button" aria-label="Close menu" className="fixed inset-0 z-30" onClick={() => setMenu(null)} />
           <ul role="menu" style={{ top: menu.top, left: menu.left, width: MENU_WIDTH }} className="fixed z-40 overflow-hidden rounded-xl border border-border bg-surface py-1 text-left shadow-xl">
             {menuItems(data.members.find((member) => member.id === menu.id)!).map((item) => (
               <li key={item.label} role="none">

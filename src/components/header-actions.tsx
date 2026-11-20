@@ -27,23 +27,23 @@ const TEXT_LINK =
 export function HeaderActions({ userName, plan, subscription, signingOut, onSignOut }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
 
   // Close open menus on Escape or a click outside them.
   useEffect(() => {
-    if (!menuOpen && !bellOpen) return;
+    if (!menuOpen && !bellOpen && !inviteOpen) return;
+    function closeAll() {
+      setMenuOpen(false);
+      setBellOpen(false);
+      setInviteOpen(false);
+    }
     function onPointerDown(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setMenuOpen(false);
-        setBellOpen(false);
-      }
+      if (!containerRef.current?.contains(event.target as Node)) closeAll();
     }
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setMenuOpen(false);
-        setBellOpen(false);
-      }
+      if (event.key === "Escape") closeAll();
     }
     document.addEventListener("mousedown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
@@ -51,14 +51,48 @@ export function HeaderActions({ userName, plan, subscription, signingOut, onSign
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [menuOpen, bellOpen]);
+  }, [menuOpen, bellOpen, inviteOpen]);
 
   return (
     <div ref={containerRef} className="flex shrink-0 items-center gap-1">
-      <button type="button" disabled title="Team invites are not built yet" className={TEXT_LINK}>
-        <IconUserPlus />
-        <span className="hidden xl:inline">Invite team</span>
-      </button>
+      <div className="relative">
+        <button
+          type="button"
+          aria-label="Invite team"
+          aria-expanded={inviteOpen}
+          aria-controls="invite-team-panel"
+          onClick={() => {
+            setInviteOpen((open) => !open);
+            setBellOpen(false);
+            setMenuOpen(false);
+          }}
+          className={TEXT_LINK}
+        >
+          <IconUserPlus />
+          <span className="hidden xl:inline">Invite team</span>
+        </button>
+        {inviteOpen && (
+          <div
+            id="invite-team-panel"
+            role="region"
+            aria-label="Invite team"
+            className="absolute right-0 top-11 z-30 w-72 rounded-lg border border-border bg-surface p-4 text-sm text-foreground shadow-lg"
+          >
+            <p className="font-semibold">Invite your team</p>
+            <p className="mt-1 text-muted">
+              Teams use the Organization plan. A super admin sends the invitations and chooses which members hold a seat.
+              Ask your super admin to invite you, or see what the plan includes.
+            </p>
+            <Link
+              href="/pricing#org-plan"
+              onClick={() => setInviteOpen(false)}
+              className="mt-3 inline-block font-medium text-accent hover:underline focus-visible:outline-2 focus-visible:outline-accent"
+            >
+              View the Organization plan
+            </Link>
+          </div>
+        )}
+      </div>
 
       <Link href="/pricing" className={TEXT_LINK}>
         <IconTag />
@@ -78,6 +112,7 @@ export function HeaderActions({ userName, plan, subscription, signingOut, onSign
           onClick={() => {
             setBellOpen((open) => !open);
             setMenuOpen(false);
+            setInviteOpen(false);
           }}
           className={ICON_BUTTON}
         >
@@ -110,6 +145,7 @@ export function HeaderActions({ userName, plan, subscription, signingOut, onSign
           onClick={() => {
             setMenuOpen((open) => !open);
             setBellOpen(false);
+            setInviteOpen(false);
           }}
           className="rounded-full focus-visible:outline-2 focus-visible:outline-accent"
         >

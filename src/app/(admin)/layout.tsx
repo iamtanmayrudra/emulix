@@ -19,6 +19,9 @@ async function AdminGate({ children }: { children: ReactNode }) {
   );
 }
 
+/** Same reason as the (app) layout: entering the admin area reads the session and may redirect, so it is allowed to block. */
+export const instant = false;
+
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <Suspense

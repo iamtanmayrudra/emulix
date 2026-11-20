@@ -123,7 +123,7 @@ function Detail({ entry, onClose, onRemove }: { entry: ReportEntry; onClose: () 
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onKeyDown={(event) => event.key === "Escape" && onClose()}>
-      <button type="button" aria-label="Close report" className="absolute inset-0 cursor-default" onClick={onClose} />
+      <button type="button" aria-label="Close report" className="absolute inset-0" onClick={onClose} />
       <aside role="dialog" aria-modal="true" aria-label="Report details" className="relative flex h-full w-full max-w-xl flex-col overflow-y-auto border-l border-border bg-surface shadow-2xl">
         <header className="sticky top-0 z-10 flex items-start gap-3 border-b border-border bg-surface/95 p-5 backdrop-blur">
           <KindIcon kind={entry.kind} size="h-10 w-10" />
