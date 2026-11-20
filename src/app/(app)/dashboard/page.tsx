@@ -153,3 +153,6 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
+
+/** Signed-in only: the layout reads the session and may redirect, so this page cannot be validated as instant. See the layout. */
+export const instant = false;

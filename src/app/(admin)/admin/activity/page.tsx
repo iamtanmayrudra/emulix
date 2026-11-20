@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { SimplePageSkeleton } from "@/components/skeleton";
 import { getCurrentUser } from "@/lib/auth/runtime";
@@ -34,7 +35,9 @@ const RESULT_LABEL = { ok: "Done", refused: "Refused", denied: "Denied" } as con
 
 async function ActivityContent() {
   const user = await getCurrentUser();
-  const entries = await getOrgService().listActivity(user!);
+  // The layout sends anyone else away, but it renders at the same time as this page, so check here too.
+  if (!user) redirect("/login");
+  const entries = await getOrgService().listActivity(user);
 
   return (
     <div className="space-y-6">
@@ -87,3 +90,6 @@ export default function AdminActivityPage() {
     </Suspense>
   );
 }
+
+/** Signed-in only: the layout reads the session and may redirect, so this page cannot be validated as instant. See the layout. */
+export const instant = false;
