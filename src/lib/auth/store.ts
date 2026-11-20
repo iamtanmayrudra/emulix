@@ -1,4 +1,6 @@
+import { databaseUrl, getPrisma } from "@/lib/db/prisma";
 import { devSeedUsers } from "./dev-seed";
+import { PrismaAuthStore } from "./prisma-store";
 import type { EmailLogRecord } from "@/lib/email/types";
 import type { BillingRecord } from "@/lib/billing/checkout";
 import type { SubscriptionStatus } from "@/lib/mock-data";
@@ -6,9 +8,8 @@ import type { SubscriptionStatus } from "@/lib/mock-data";
 /**
  * Storage for accounts, sessions, and one-time tokens.
  *
- * Development uses the in-memory implementation below. Data is lost on restart and is not shared
- * between server instances. Replace it with the chosen database (plan decision 8) before any
- * deployment. The service layer only talks to this interface.
+ * Two implementations: the in-memory one below (development, tests) and PrismaAuthStore (Postgres, deployed sites).
+ * getAuthStore() picks by DATABASE_URL. The service layer only talks to this interface.
  */
 
 export type UserRecord = {
@@ -181,8 +182,24 @@ export class MemoryAuthStore implements AuthStore {
 
 const globalForAuth = globalThis as typeof globalThis & { __emulixAuthStore?: AuthStore };
 
-/** One store per server process. Kept on globalThis so hot reloads in development do not reset it. */
+/**
+ * One store per server process. Kept on globalThis so hot reloads in development do not reset it.
+ *
+ * With DATABASE_URL set, accounts live in Postgres and are shared by every server instance. Without it, the store is
+ * in memory: fine for development, but on a host that runs several instances (Netlify, Vercel) an account made on one
+ * instance does not exist on the next, so sign-in fails. That is logged once in production.
+ * The development logins (admin, free, ...) are only created in the memory store.
+ */
 export function getAuthStore(): AuthStore {
-  globalForAuth.__emulixAuthStore ??= new MemoryAuthStore(devSeedUsers());
+  if (!globalForAuth.__emulixAuthStore) {
+    if (databaseUrl()) {
+      globalForAuth.__emulixAuthStore = new PrismaAuthStore(getPrisma());
+    } else {
+      if (process.env.NODE_ENV === "production") {
+        console.warn("[auth] DATABASE_URL is not set. Accounts are kept in memory and will not survive a restart or reach other server instances.");
+      }
+      globalForAuth.__emulixAuthStore = new MemoryAuthStore(devSeedUsers());
+    }
+  }
   return globalForAuth.__emulixAuthStore;
 }

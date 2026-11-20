@@ -1,0 +1,75 @@
+// Accounts, sessions, one-time tokens and the email log (src/lib/auth/store.ts is the only code that reads these).
+// The connection string lives in prisma.config.ts, which reads DATABASE_URL.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              String    @id
+  /// Lowercased by the auth service. Also holds the development-only logins, which are not real emails.
+  email           String    @unique
+  name            String
+  passwordHash    String
+  emailVerifiedAt DateTime?
+  failedLogins    Int       @default(0)
+  lockedUntil     DateTime?
+  createdAt       DateTime  @default(now())
+  lastLoginAt     DateTime?
+  /// Null means free.
+  subscription    String?
+  /// The last Pro order, as JSON. Null for free accounts.
+  billing         Json?
+
+  sessions  Session[]
+  tokens    Token[]
+  emailLogs EmailLog[]
+}
+
+model Session {
+  /// sha256 of the cookie value. The cookie value itself is never stored.
+  tokenHash  String    @id
+  userId     String
+  createdAt  DateTime
+  lastSeenAt DateTime
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Token {
+  /// sha256 of the emailed token.
+  tokenHash String    @id
+  userId    String
+  /// verify_email or reset_password
+  purpose   String
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+}
+
+model EmailLog {
+  id                String    @id
+  userId            String?
+  type              String
+  recipient         String
+  providerMessageId String?
+  status            String
+  error             String?
+  sentAt            DateTime?
+  createdAt         DateTime
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+}

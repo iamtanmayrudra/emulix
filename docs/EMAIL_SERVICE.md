@@ -1,8 +1,8 @@
 # Email service
 
 Status: **built**, following [emulix-optimizer-email-service-plan.md](emulix-optimizer-email-service-plan.md). It sends the account emails through
-[Resend](https://resend.com) and falls back to the server console when no key is set. Storage of the email log is in
-memory, like the rest of the auth store, until the database is chosen.
+[Resend](https://resend.com) and falls back to the server console when no key is set. The email log is kept with the
+rest of the auth data ([DATABASE.md](DATABASE.md)).
 
 ## What it sends
 
@@ -85,8 +85,8 @@ newest first. There is no admin screen for it yet.
 
 ## Not built yet
 
-- A database for users, tokens and the email log (the plan chose MySQL with Prisma). Until then, restarting the server
-  erases accounts, and the email log.
+- Nothing about storage: users, tokens and the email log are in Postgres when `DATABASE_URL` is set ([DATABASE.md](DATABASE.md)).
+  Without it they are in memory, and restarting the server erases them.
 - Resend webhooks, to move rows to `DELIVERED` and catch bounces.
 - Redis rate limiting.
 - Turning `EMAIL_VERIFICATION_REQUIRED` on (`src/lib/auth/policy.ts`). It is off, so people can use the app before verifying.
