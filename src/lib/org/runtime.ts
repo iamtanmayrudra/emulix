@@ -27,7 +27,7 @@ export function getOrgService(): OrgService {
     orgStore: getOrgStore(),
     authStore: getAuthStore(),
     mailer: getMailer(),
-    appUrl: appUrl(),
+    appUrl,
     auth: { requestPasswordReset: auth.requestPasswordReset, resendVerification: auth.resendVerification },
   });
 }

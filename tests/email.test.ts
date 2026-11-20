@@ -149,6 +149,43 @@ describe("email service", () => {
   });
 });
 
+describe("a site with no public URL configured", () => {
+  // Production without APP_URL used to throw while the service was built, so login and sign-up returned 500 for everyone.
+  const missing = () => {
+    throw new Error("APP_URL is not set.");
+  };
+
+  function setupWithoutUrl() {
+    const store = new MemoryAuthStore();
+    const mailer = new DevelopmentMailer({ log: false });
+    return { store, mailer, service: createAuthService({ store, mailer, appUrl: missing }) };
+  }
+
+  it("still builds the service, signs people up and lets them sign in", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { service } = setupWithoutUrl();
+    await expect(service.signUp({ email: "ana@example.com", name: "Ana", password: PASSWORD }, (task) => void task())).resolves.toBeUndefined();
+    await expect(service.login({ email: "ana@example.com", password: PASSWORD })).resolves.toMatchObject({ user: { email: "ana@example.com" } });
+  });
+
+  it("still answers validation errors with a 400-style failure, not a crash", async () => {
+    const { service } = setupWithoutUrl();
+    await expect(service.signUp({ email: "nope", name: "Ana", password: PASSWORD })).rejects.toBeInstanceOf(AuthFailure);
+  });
+
+  it("fails only the email, records it, and sends nothing", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { store, mailer, service } = setupWithoutUrl();
+    await expect(service.signUp({ email: "ana@example.com", name: "Ana", password: PASSWORD })).rejects.toBeInstanceOf(EmailDeliveryError);
+
+    const user = (await store.findUserByEmail("ana@example.com"))!;
+    const [row] = await store.findEmailLogs(user.id);
+    expect(row).toMatchObject({ type: "VERIFICATION", status: "FAILED" });
+    expect(row.error).toContain("APP_URL");
+    expect(mailer.outbox).toHaveLength(0);
+  });
+});
+
 describe("account emails", () => {
   it("expires the verification link after an hour, inside the plan's 30 to 60 minutes", () => {
     expect(VERIFY_TOKEN_TTL_MS).toBe(60 * 60 * 1000);

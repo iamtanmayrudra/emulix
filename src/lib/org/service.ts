@@ -4,6 +4,7 @@ import { hashPassword, passwordPolicyError, verifyPassword } from "../auth/passw
 import { isValidEmail, normalizeEmail } from "../auth/service";
 import type { AuthStore, UserRecord } from "../auth/store";
 import { generateToken, hashToken } from "../auth/tokens";
+import { resolveBaseUrl, type BaseUrl } from "../email/types";
 import type { MemoryOrgStore } from "./store";
 import type { Access, ActivityEntry, ActivityResult, Membership, MemberList, MemberRow, OrgRole } from "./types";
 
@@ -26,7 +27,7 @@ export type OrgDeps = {
   orgStore: MemoryOrgStore;
   authStore: AuthStore;
   mailer: Mailer;
-  appUrl: string;
+  appUrl: BaseUrl;
   /** The parts of the auth service the super admin may trigger. Neither exposes a password. */
   auth: {
     requestPasswordReset(email: string): Promise<void>;
@@ -199,7 +200,7 @@ export function createOrgService({ orgStore, authStore, mailer, appUrl, auth, no
       await mailer.send({
         to: email,
         subject: `You have been invited to ${orgName} on Emulix`,
-        text: `${actor.name} invited you to join ${orgName} on Emulix.\n\nChoose your password:\n\n${appUrl}/invite?token=${token}\n\nThis link works once and expires in 7 days.`,
+        text: `${actor.name} invited you to join ${orgName} on Emulix.\n\nChoose your password:\n\n${resolveBaseUrl(appUrl)}/invite?token=${token}\n\nThis link works once and expires in 7 days.`,
       });
       await log(admin.orgId, actor, "invite", null, "ok", `Invitation requested for ${email}`);
     },

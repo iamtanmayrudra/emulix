@@ -42,3 +42,13 @@ export class EmailDeliveryError extends Error {
     this.name = "EmailDeliveryError";
   }
 }
+
+/**
+ * The public base URL for links in emails, no trailing slash. A function is read only when an email is built, so a
+ * missing setting can fail that one email without taking sign-in down with it.
+ */
+export type BaseUrl = string | (() => string);
+
+export function resolveBaseUrl(source: BaseUrl): string {
+  return typeof source === "function" ? source() : source;
+}

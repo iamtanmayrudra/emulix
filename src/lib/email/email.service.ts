@@ -5,7 +5,7 @@ import { PasswordResetEmail, PASSWORD_RESET_SUBJECT } from "./templates/password
 import { SecurityAlertEmail, SECURITY_ALERT_SUBJECT } from "./templates/security-alert";
 import { VerificationEmail, VERIFICATION_SUBJECT } from "./templates/verification";
 import { WelcomeEmail, WELCOME_SUBJECT } from "./templates/welcome";
-import { EmailDeliveryError, type EmailLogRecord, type EmailType, type Mailer } from "./types";
+import { EmailDeliveryError, resolveBaseUrl, type BaseUrl, type EmailLogRecord, type EmailType, type Mailer } from "./types";
 
 /** The part of the store the service writes to. The auth store implements it. */
 export interface EmailLogStore {
@@ -17,7 +17,7 @@ export type EmailServiceDeps = {
   mailer: Mailer;
   log: EmailLogStore;
   /** Public base URL, no trailing slash. Links in emails are built from it. */
-  appUrl: string;
+  appUrl: BaseUrl;
   now?: () => Date;
 };
 
@@ -58,7 +58,8 @@ export function createEmailService(deps: EmailServiceDeps) {
     }
   }
 
-  async function deliver(type: EmailType, to: Recipient, subject: string, element: ReactElement) {
+  /** `build` runs inside the guarded block, so a missing APP_URL is logged as a failed email instead of crashing the caller. */
+  async function deliver(type: EmailType, to: Recipient, subject: string, build: (baseUrl: string) => ReactElement) {
     const record: EmailLogRecord = {
       id: randomUUID(),
       userId: to.userId,
@@ -73,6 +74,7 @@ export function createEmailService(deps: EmailServiceDeps) {
     await safely(() => log.insertEmailLog(record));
 
     try {
+      const element = build(resolveBaseUrl(appUrl));
       const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
       const result = await mailer.send({ to: to.email, subject, html, text });
       await safely(() => log.updateEmailLog(record.id, { status: "SENT", providerMessageId: result?.id ?? null, sentAt: now() }));
@@ -85,22 +87,26 @@ export function createEmailService(deps: EmailServiceDeps) {
 
   return {
     sendVerificationEmail(to: Recipient, token: string, ttlMs: number) {
-      const url = `${appUrl}/verify-email?token=${token}`;
-      return deliver("VERIFICATION", to, VERIFICATION_SUBJECT, VerificationEmail({ name: to.name, url, expiresIn: formatDuration(ttlMs) }));
+      return deliver("VERIFICATION", to, VERIFICATION_SUBJECT, (base) =>
+        VerificationEmail({ name: to.name, url: `${base}/verify-email?token=${token}`, expiresIn: formatDuration(ttlMs) }),
+      );
     },
 
     sendPasswordResetEmail(to: Recipient, token: string, ttlMs: number) {
-      const url = `${appUrl}/reset-password?token=${token}`;
-      return deliver("PASSWORD_RESET", to, PASSWORD_RESET_SUBJECT, PasswordResetEmail({ name: to.name, url, expiresIn: formatDuration(ttlMs) }));
+      return deliver("PASSWORD_RESET", to, PASSWORD_RESET_SUBJECT, (base) =>
+        PasswordResetEmail({ name: to.name, url: `${base}/reset-password?token=${token}`, expiresIn: formatDuration(ttlMs) }),
+      );
     },
 
     sendWelcomeEmail(to: Recipient) {
-      return deliver("WELCOME", to, WELCOME_SUBJECT, WelcomeEmail({ name: to.name, dashboardUrl: `${appUrl}/dashboard` }));
+      return deliver("WELCOME", to, WELCOME_SUBJECT, (base) => WelcomeEmail({ name: to.name, dashboardUrl: `${base}/dashboard` }));
     },
 
     sendSecurityAlertEmail(to: Recipient, event: string) {
       const when = `${now().toISOString().slice(0, 16).replace("T", " ")} UTC`;
-      return deliver("SECURITY_ALERT", to, SECURITY_ALERT_SUBJECT, SecurityAlertEmail({ name: to.name, event, when, resetUrl: `${appUrl}/forgot-password` }));
+      return deliver("SECURITY_ALERT", to, SECURITY_ALERT_SUBJECT, (base) =>
+        SecurityAlertEmail({ name: to.name, event, when, resetUrl: `${base}/forgot-password` }),
+      );
     },
   };
 }

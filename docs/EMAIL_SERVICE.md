@@ -36,7 +36,7 @@ APP_URL=https://your-production-domain.com
 | Neither set, development | Emails are printed in the server console (`[dev mail] …`) |
 | Neither set, production | Sending throws, so a missing provider is never silent |
 | Key set, sender missing | A warning is logged and no email is sent through Resend |
-| `APP_URL` missing in production | Sending throws. A link to localhost is never right. `NEXT_PUBLIC_APP_URL` is still read as a fallback |
+| `APP_URL` missing in production | Each email fails and is logged as FAILED with the reason, because a link to localhost is never right. Sign-in and sign-up keep working. `NEXT_PUBLIC_APP_URL` is read as a fallback, and on Netlify its own `URL` is the last resort |
 
 `APP_URL` must be the address the app is opened on. If something else holds port 3000 and Next moves to 3001, set it to 3001, or the links in emails open the wrong site.
 

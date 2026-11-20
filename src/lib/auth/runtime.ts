@@ -11,10 +11,15 @@ export { SESSION_COOKIE };
 
 /**
  * The public base URL that links in emails point to. APP_URL is the server-side name. NEXT_PUBLIC_APP_URL is still read
- * so older setups keep working. In production one of them is required, because a link to localhost is never right.
+ * so older setups keep working, and on Netlify its own URL is the last resort. In production one of them is required,
+ * because a link to localhost is never right.
+ *
+ * This throws when nothing is set in production, so call it only when an email is built. Pass the function itself, never
+ * its result, to the services: sign-in must keep working even when email is not set up.
  */
 export function appUrl(): string {
-  const configured = (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "").trim().replace(/\/+$/, "");
+  const netlify = process.env.NETLIFY ? process.env.URL : undefined;
+  const configured = (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || netlify || "").trim().replace(/\/+$/, "");
   if (configured) return configured;
   if (process.env.NODE_ENV === "production") throw new Error("APP_URL is not set. Emailed links need the public address of the site.");
   return "http://localhost:3000";
@@ -25,7 +30,7 @@ export const afterResponse: Schedule = (task) => after(task);
 
 /** Builds the auth service on top of the process-wide store and mailer. */
 export function getAuthService() {
-  return createAuthService({ store: getAuthStore(), mailer: getMailer(), appUrl: appUrl() });
+  return createAuthService({ store: getAuthStore(), mailer: getMailer(), appUrl });
 }
 
 export function sessionCookieOptions(expires?: Date) {

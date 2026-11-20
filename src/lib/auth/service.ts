@@ -4,6 +4,7 @@ import { hashPassword, passwordPolicyError, verifyPassword } from "./password";
 import type { AuthStore, SessionRecord, UserRecord } from "./store";
 import type { Mailer } from "./mailer";
 import { createEmailService } from "../email/email.service";
+import type { BaseUrl } from "../email/types";
 
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
@@ -38,7 +39,7 @@ export class AuthFailure extends Error {
 export type AuthDeps = {
   store: AuthStore;
   mailer: Mailer;
-  appUrl: string;
+  appUrl: BaseUrl;
   now?: () => Date;
 };
 
