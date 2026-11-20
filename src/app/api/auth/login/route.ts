@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { SESSION_COOKIE, clientIp, getAuthService, sessionCookieOptions } from "@/lib/auth/runtime";
+import { SESSION_COOKIE, afterResponse, clientIp, getAuthService, sessionCookieOptions } from "@/lib/auth/runtime";
 import { errorResponse, rateLimited, readJsonBody, stringField } from "@/lib/auth/http";
 import { getUserAccess } from "@/lib/org/runtime";
 
@@ -9,10 +9,13 @@ export async function POST(request: Request) {
 
   try {
     const body = await readJsonBody(request);
-    const { sessionToken, user } = await getAuthService().login({
-      email: stringField(body, "email"),
-      password: stringField(body, "password"),
-    });
+    const { sessionToken, user } = await getAuthService().login(
+      {
+        email: stringField(body, "email"),
+        password: stringField(body, "password"),
+      },
+      afterResponse,
+    );
 
     // A deactivated member cannot sign in, even with the right password.
     const access = getUserAccess(user.id);

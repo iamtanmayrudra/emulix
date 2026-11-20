@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { devOrgSeed } from "../auth/dev-seed";
+import { EmailDeliveryError } from "../email/types";
 import { getMailer } from "../auth/mailer";
 import { appUrl, getAuthService } from "../auth/runtime";
 import { getAuthStore, type UserRecord } from "../auth/store";
@@ -58,6 +59,9 @@ export const ORG_ERROR_STATUS: Record<OrgErrorCode, number> = {
 export function orgErrorResponse(error: unknown): NextResponse {
   if (error instanceof OrgFailure) {
     return NextResponse.json({ error: error.code, message: error.message }, { status: ORG_ERROR_STATUS[error.code] });
+  }
+  if (error instanceof EmailDeliveryError) {
+    return NextResponse.json({ error: "email_failed", message: "Unable to send email. Try again in a few minutes." }, { status: 502 });
   }
   console.error("[org] unexpected error", error);
   return NextResponse.json({ error: "server_error", message: "Something went wrong. Try again." }, { status: 500 });

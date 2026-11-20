@@ -1,6 +1,6 @@
 # Architecture notes
 
-Source of truth for product scope: [../website_mobile_testing_platform_master_plan.md](../website_mobile_testing_platform_master_plan.md).
+Source of truth for product scope: [website_mobile_testing_platform_master_plan.md](website_mobile_testing_platform_master_plan.md).
 This file records what is built now and the decisions behind it.
 
 ## Current implementation (Phase 1)

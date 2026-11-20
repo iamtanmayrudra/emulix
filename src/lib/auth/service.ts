@@ -3,12 +3,14 @@ import { generateToken, hashToken } from "./tokens";
 import { hashPassword, passwordPolicyError, verifyPassword } from "./password";
 import type { AuthStore, SessionRecord, UserRecord } from "./store";
 import type { Mailer } from "./mailer";
+import { createEmailService } from "../email/email.service";
 
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-export const VERIFY_TOKEN_TTL_MS = 24 * HOUR;
+/** The email plan asks for 30 to 60 minutes for verification and 15 to 30 for reset (docs/EMAIL_SERVICE.md). */
+export const VERIFY_TOKEN_TTL_MS = HOUR;
 export const RESET_TOKEN_TTL_MS = 30 * MINUTE;
 /** Sessions end after 14 days idle or 30 days total, whichever comes first. */
 export const SESSION_IDLE_MS = 14 * DAY;
@@ -42,6 +44,25 @@ export type AuthDeps = {
 
 export type LoginResult = { sessionToken: string; user: UserRecord };
 
+/**
+ * Lets a route run email delivery after the response has gone out, for example with Next's after(). Without it the
+ * email is sent before the call returns. Deferring keeps the response time the same whether or not an account exists.
+ */
+export type Schedule = (task: () => Promise<void>) => void;
+
+/**
+ * Runs a delivery task. A required email lets its failure reach the caller. An optional one (welcome, security alert)
+ * never fails the action it follows. Failures are already logged by the email service.
+ */
+async function dispatch(task: () => Promise<void>, options: { schedule?: Schedule; required: boolean }) {
+  if (options.schedule) {
+    options.schedule(() => task().catch(() => undefined));
+    return;
+  }
+  if (options.required) return task();
+  await task().catch(() => undefined);
+}
+
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
@@ -61,8 +82,12 @@ function dummyHash(): Promise<string> {
 export function createAuthService(deps: AuthDeps) {
   const { store, mailer, appUrl } = deps;
   const now = deps.now ?? (() => new Date());
+  const emails = createEmailService({ mailer, log: store, appUrl, now });
+  const recipient = (user: UserRecord) => ({ userId: user.id, email: user.email, name: user.name });
 
+  /** Issues a fresh link and retires older ones, so only the newest email works. Throws EmailDeliveryError if it cannot send. */
   async function sendVerification(user: UserRecord, at: Date) {
+    await store.invalidateUserTokens(user.id, "verify_email", at);
     const token = generateToken();
     await store.insertToken({
       tokenHash: hashToken(token),
@@ -71,11 +96,7 @@ export function createAuthService(deps: AuthDeps) {
       expiresAt: new Date(at.getTime() + VERIFY_TOKEN_TTL_MS),
       usedAt: null,
     });
-    await mailer.send({
-      to: user.email,
-      subject: "Verify your Emulix email",
-      text: `Confirm your email to start testing:\n\n${appUrl}/verify-email?token=${token}\n\nThis link expires in 24 hours.`,
-    });
+    await emails.sendVerificationEmail(recipient(user), token, VERIFY_TOKEN_TTL_MS);
   }
 
   async function createSession(userId: string, at: Date): Promise<string> {
@@ -96,7 +117,7 @@ export function createAuthService(deps: AuthDeps) {
      * Creates an unverified account. Returns the same result for an existing email, so sign-up
      * cannot be used to discover which emails have accounts.
      */
-    async signUp(input: { email: string; name: string; password: string }): Promise<void> {
+    async signUp(input: { email: string; name: string; password: string }, schedule?: Schedule): Promise<void> {
       const email = normalizeEmail(input.email);
       const name = input.name.trim();
       if (!isValidEmail(email)) throw new AuthFailure("invalid_input", "Enter a valid email address.");
@@ -124,7 +145,7 @@ export function createAuthService(deps: AuthDeps) {
         lastLoginAt: null,
       };
       await store.insertUser(user);
-      await sendVerification(user, at);
+      await dispatch(() => sendVerification(user, at), { schedule, required: true });
     },
 
     /** Sends a new verification link to a signed-in, unverified user. */
@@ -139,11 +160,14 @@ export function createAuthService(deps: AuthDeps) {
       const at = now();
       const record = await store.consumeToken(hashToken(token), "verify_email", at);
       if (!record) throw new AuthFailure("invalid_token", "This link is invalid or has expired.");
+      const user = await store.findUserById(record.userId);
+      const firstTime = user !== null && user.emailVerifiedAt === null;
       await store.updateUser(record.userId, { emailVerifiedAt: at });
+      if (user && firstTime) await dispatch(() => emails.sendWelcomeEmail(recipient(user)), { required: false });
       return createSession(record.userId, at);
     },
 
-    async login(input: { email: string; password: string }): Promise<LoginResult> {
+    async login(input: { email: string; password: string }, schedule?: Schedule): Promise<LoginResult> {
       const at = now();
       const email = normalizeEmail(input.email);
       const user = await store.findUserByEmail(email);
@@ -168,6 +192,9 @@ export function createAuthService(deps: AuthDeps) {
           failedLogins: locked ? 0 : failedLogins,
           lockedUntil: locked ? new Date(at.getTime() + LOCKOUT_MS) : null,
         });
+        if (locked) {
+          await dispatch(() => emails.sendSecurityAlertEmail(recipient(user), "Your account was locked for 15 minutes after repeated failed sign-in attempts."), { schedule, required: false });
+        }
         throw new AuthFailure("invalid_credentials", "Email or password is incorrect.");
       }
 
@@ -197,11 +224,12 @@ export function createAuthService(deps: AuthDeps) {
     },
 
     /** Always resolves the same way, whether or not the email has an account. */
-    async requestPasswordReset(email: string): Promise<void> {
+    async requestPasswordReset(email: string, schedule?: Schedule): Promise<void> {
       const at = now();
       const user = await store.findUserByEmail(normalizeEmail(email));
       if (!user) return;
 
+      await store.invalidateUserTokens(user.id, "reset_password", at);
       const token = generateToken();
       await store.insertToken({
         tokenHash: hashToken(token),
@@ -210,11 +238,7 @@ export function createAuthService(deps: AuthDeps) {
         expiresAt: new Date(at.getTime() + RESET_TOKEN_TTL_MS),
         usedAt: null,
       });
-      await mailer.send({
-        to: user.email,
-        subject: "Reset your Emulix password",
-        text: `Reset your password:\n\n${appUrl}/reset-password?token=${token}\n\nThis link expires in 30 minutes. If you did not ask for this, ignore this email.`,
-      });
+      await dispatch(() => emails.sendPasswordResetEmail(recipient(user), token, RESET_TOKEN_TTL_MS), { schedule, required: true });
     },
 
     /** Sets a new password, signs out every other session, and marks the email as verified. */
@@ -233,6 +257,9 @@ export function createAuthService(deps: AuthDeps) {
         emailVerifiedAt: at,
       });
       await store.revokeUserSessions(record.userId, at);
+
+      const user = await store.findUserById(record.userId);
+      if (user) await dispatch(() => emails.sendSecurityAlertEmail(recipient(user), "Your password was changed and every other session was signed out."), { required: false });
     },
   };
 }

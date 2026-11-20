@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRateLimiter } from "./rate-limit";
+import { EmailDeliveryError } from "../email/types";
 import { AuthFailure, type AuthErrorCode } from "./service";
 
 const STATUS_BY_CODE: Record<AuthErrorCode, number> = {
@@ -29,6 +30,13 @@ export function errorResponse(error: unknown): NextResponse {
     return NextResponse.json(
       { error: error.code, message: error.message },
       { status: STATUS_BY_CODE[error.code] },
+    );
+  }
+  // The provider refused or could not be reached. The details are in the server log and the email log, never in the response.
+  if (error instanceof EmailDeliveryError) {
+    return NextResponse.json(
+      { error: "email_failed", message: "Unable to send email. Try again in a few minutes." },
+      { status: 502 },
     );
   }
   console.error("[auth] unexpected error", error);

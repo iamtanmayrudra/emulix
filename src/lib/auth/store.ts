@@ -1,4 +1,5 @@
 import { devSeedUsers } from "./dev-seed";
+import type { EmailLogRecord } from "@/lib/email/types";
 import type { BillingRecord } from "@/lib/billing/checkout";
 import type { SubscriptionStatus } from "@/lib/mock-data";
 
@@ -55,6 +56,14 @@ export interface AuthStore {
   insertToken(token: TokenRecord): Promise<void>;
   /** Marks a matching, unused, unexpired token as used and returns it. Returns null otherwise. */
   consumeToken(tokenHash: string, purpose: TokenPurpose, now: Date): Promise<TokenRecord | null>;
+  /** Marks every unused token of this kind for the user as used, so only the newest link works. */
+  invalidateUserTokens(userId: string, purpose: TokenPurpose, at: Date): Promise<void>;
+
+  /** One row per email attempt (docs/EMAIL_SERVICE.md). */
+  insertEmailLog(record: EmailLogRecord): Promise<void>;
+  updateEmailLog(id: string, patch: Partial<EmailLogRecord>): Promise<void>;
+  /** Newest first. */
+  findEmailLogs(userId: string): Promise<EmailLogRecord[]>;
 
   insertSession(session: SessionRecord): Promise<void>;
   findSession(tokenHash: string): Promise<SessionRecord | null>;
@@ -63,11 +72,14 @@ export interface AuthStore {
   revokeUserSessions(userId: string, at: Date): Promise<void>;
 }
 
+const MAX_MEMORY_EMAIL_LOGS = 1000;
+
 export class MemoryAuthStore implements AuthStore {
   private users = new Map<string, UserRecord>();
   private usersByEmail = new Map<string, string>();
   private tokens = new Map<string, TokenRecord>();
   private sessions = new Map<string, SessionRecord>();
+  private emailLogs: EmailLogRecord[] = [];
 
   /** Seed users are loaded synchronously so the store is ready before the first request. */
   constructor(seedUsers: UserRecord[] = []) {
@@ -118,6 +130,27 @@ export class MemoryAuthStore implements AuthStore {
     }
     token.usedAt = now;
     return { ...token };
+  }
+
+  async invalidateUserTokens(userId: string, purpose: TokenPurpose, at: Date) {
+    for (const token of this.tokens.values()) {
+      if (token.userId === userId && token.purpose === purpose && !token.usedAt) token.usedAt = at;
+    }
+  }
+
+  async insertEmailLog(record: EmailLogRecord) {
+    this.emailLogs.push({ ...record });
+    // Development storage only keeps the latest rows. A database has no such cap.
+    if (this.emailLogs.length > MAX_MEMORY_EMAIL_LOGS) this.emailLogs.shift();
+  }
+
+  async updateEmailLog(id: string, patch: Partial<EmailLogRecord>) {
+    const row = this.emailLogs.find((entry) => entry.id === id);
+    if (row) Object.assign(row, patch);
+  }
+
+  async findEmailLogs(userId: string) {
+    return this.emailLogs.filter((entry) => entry.userId === userId).map((entry) => ({ ...entry })).reverse();
   }
 
   async insertSession(session: SessionRecord) {

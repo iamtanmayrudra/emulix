@@ -23,7 +23,7 @@ export default function SignupPage() {
         ]}
         notice={
           <p>
-            By creating an account you agree to the terms and privacy policy. Testing starts after you verify your email.
+            By creating an account you agree to the terms and privacy policy. We will email you a link to confirm your address.
           </p>
         }
         footer={

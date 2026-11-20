@@ -1,6 +1,6 @@
 # Task checklist
 
-Tracks progress against the phases in the [master plan](../website_mobile_testing_platform_master_plan.md).
+Tracks progress against the phases in the [master plan](website_mobile_testing_platform_master_plan.md).
 
 ## Phase 0: Definition and technical validation
 

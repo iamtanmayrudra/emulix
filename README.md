@@ -1,7 +1,7 @@
 # Emulix
 
 Website and mobile app testing and optimization platform. The product plan is in
-[website_mobile_testing_platform_master_plan.md](website_mobile_testing_platform_master_plan.md).
+[docs/website_mobile_testing_platform_master_plan.md](docs/website_mobile_testing_platform_master_plan.md).
 
 **Current state: website testing MVP in development.** Live browsers, Lighthouse audits, and sign-in work.
 Storage, email, billing, and APK testing are still stand-ins. See [Services](#services) for what is real.

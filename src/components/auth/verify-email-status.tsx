@@ -79,7 +79,7 @@ export function VerifyEmailStatus({ token }: Props) {
               ),
             )}
           </ol>
-          <p className="text-xs text-muted">The link expires in 24 hours. Check your spam folder if you cannot find it.</p>
+          <p className="text-xs text-muted">The link expires in 1 hour. Check your spam folder if you cannot find it.</p>
         </>
       )}
       {resent && (

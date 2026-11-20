@@ -1,7 +1,7 @@
 # Authentication, subscriptions, and payment journey
 
 Status: **specification, not yet built.** Authentication belongs to Phase 2 and subscriptions and
-payments to Phase 4 of the [master plan](../website_mobile_testing_platform_master_plan.md). Where this
+payments to Phase 4 of the [master plan](website_mobile_testing_platform_master_plan.md). Where this
 document gives a concrete value (for example a password length), it is a proposed default to confirm
 before build.
 
