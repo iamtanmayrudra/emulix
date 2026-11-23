@@ -9,7 +9,7 @@ what happens instead, and what to set.
 | Feature | On Netlify | On your own server or laptop |
 | --- | --- | --- |
 | Sign-up, sign-in, profile, billing demo | Works. Needs the database ([NETLIFY_LOGIN_FIX.md](NETLIFY_LOGIN_FIX.md)) | Works |
-| Optimization audit (`/optimize`) | Works through Google PageSpeed Insights. Needs `PAGESPEED_API_KEY` for dependable use | Runs Lighthouse in a local browser |
+| Optimization audit (`/optimize`) | Works through Google PageSpeed Insights. **Needs `PAGESPEED_API_KEY`** | Runs Lighthouse in a local browser |
 | Website testing and APK testing on live devices (`/test`, `/apk`) | Shows "Live browser testing is not available on this hosted demo" | Works with the Playwright browsers |
 | Reports list | Works, but audit and session history is kept in memory per server instance, so it can appear empty | Works |
 
@@ -30,8 +30,14 @@ reports list loaded the Playwright browser library when the route started, and a
 | --- | --- |
 | `PAGESPEED_API_KEY` | A free Google API key with the PageSpeed Insights API enabled |
 
-Without the key Google gives a small shared quota that is usually exhausted, and the audit says
-"The audit service is busy. Try again in a minute."
+The key is required. Google gives requests without a key a daily quota of zero, so every one is refused.
+
+| What the audit page says | Meaning |
+| --- | --- |
+| "Audits are not set up on this site yet." | `PAGESPEED_API_KEY` is not set on the site. Add it and redeploy |
+| "The audit service is busy. Try again in a minute." | Google refused with 429 even with a key: the key's daily quota is used up, or the PageSpeed Insights API is not enabled for its project |
+| "That page could not be audited. Check the address is public and loads." | Google could not open the page. Staging sites behind a login, a password or an IP allow-list cannot be audited |
+| "The audit took too long." | The page needed more than 24 seconds |
 
 1. Open [console.cloud.google.com](https://console.cloud.google.com) and pick or create a project.
 2. APIs & Services → Library → search **PageSpeed Insights API** → Enable.

@@ -6,8 +6,8 @@ import { summarizeReport, type AuditResult, type FormFactor, type LighthouseRepo
  * (see src/lib/testing/environment.ts). The service returns a full Lighthouse report, so the rest of the app reads it
  * exactly like a local run.
  *
- * PAGESPEED_API_KEY is optional but recommended: without a key Google gives a small shared quota that is often used up.
- * It is server-only. The page being audited must be reachable from the internet, which the URL guard already requires.
+ * PAGESPEED_API_KEY is required. Google gives keyless requests a daily quota of zero, so every one is refused with 429.
+ * The key is server-only. The page being audited must be reachable from the internet, which the URL guard already requires.
  */
 const ENDPOINT = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed";
 const CATEGORIES = ["performance", "accessibility", "best-practices", "seo"];
@@ -23,10 +23,15 @@ export async function runPageSpeedAudit(
 ): Promise<AuditResult> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const apiKey = options.apiKey ?? process.env.PAGESPEED_API_KEY?.trim();
+  if (!apiKey) {
+    // Say so plainly instead of calling Google, which would answer 429 and look like a busy service.
+    console.error("[audit] PAGESPEED_API_KEY is not set. Audits on this host need it (docs/NETLIFY_LIMITS.md).");
+    throw new AuditFailure("audit_failed", "Audits are not set up on this site yet. Ask the site owner to finish the setup.");
+  }
 
   const params = new URLSearchParams({ url: input.url, strategy: input.formFactor === "desktop" ? "desktop" : "mobile" });
   for (const category of CATEGORIES) params.append("category", category);
-  if (apiKey) params.set("key", apiKey);
+  params.set("key", apiKey);
 
   const fetchedAt = new Date();
   let response: Response;

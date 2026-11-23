@@ -60,32 +60,41 @@ describe("runPageSpeedAudit", () => {
     ]);
   });
 
-  it("uses the desktop strategy and sends no key when none is set", async () => {
-    vi.stubEnv("PAGESPEED_API_KEY", "");
+  it("uses the desktop strategy, and reads the key from PAGESPEED_API_KEY", async () => {
+    vi.stubEnv("PAGESPEED_API_KEY", "env-key");
     const fetchImpl = vi.fn(respond(200, { lighthouseResult }));
     await runPageSpeedAudit({ ...input, formFactor: "desktop" }, { fetchImpl });
     const url = new URL(String(fetchImpl.mock.calls[0][0]));
     expect(url.searchParams.get("strategy")).toBe("desktop");
-    expect(url.searchParams.has("key")).toBe(false);
+    expect(url.searchParams.get("key")).toBe("env-key");
+  });
+
+  it("does not call Google at all without a key, and says the site is not set up", async () => {
+    vi.stubEnv("PAGESPEED_API_KEY", "");
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const fetchImpl = vi.fn(respond(200, { lighthouseResult }));
+    await expect(runPageSpeedAudit(input, { fetchImpl })).rejects.toThrow("Audits are not set up on this site yet. Ask the site owner to finish the setup.");
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it("explains a busy service, a page it cannot audit, and any other refusal", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
-    await expect(runPageSpeedAudit(input, { fetchImpl: respond(429, { error: { message: "quota" } }) })).rejects.toThrow(/busy/);
-    await expect(runPageSpeedAudit(input, { fetchImpl: respond(400, { error: { message: "bad" } }) })).rejects.toThrow(/could not be audited/);
-    await expect(runPageSpeedAudit(input, { fetchImpl: respond(500, {}) })).rejects.toThrow(/could not finish/);
-    await expect(runPageSpeedAudit(input, { fetchImpl: respond(200, {}) })).rejects.toBeInstanceOf(AuditFailure);
+    const keyed = (fetchImpl: typeof fetch) => ({ apiKey: "k", fetchImpl });
+    await expect(runPageSpeedAudit(input, keyed(respond(429, { error: { message: "quota" } })))).rejects.toThrow(/busy/);
+    await expect(runPageSpeedAudit(input, keyed(respond(400, { error: { message: "bad" } })))).rejects.toThrow(/could not be audited/);
+    await expect(runPageSpeedAudit(input, keyed(respond(500, {})))).rejects.toThrow(/could not finish/);
+    await expect(runPageSpeedAudit(input, keyed(respond(200, {})))).rejects.toBeInstanceOf(AuditFailure);
   });
 
   it("reports a network failure and a timeout without leaking details", async () => {
     const down = (async () => {
       throw new TypeError("fetch failed: ECONNRESET 10.0.0.1");
     }) as typeof fetch;
-    await expect(runPageSpeedAudit(input, { fetchImpl: down })).rejects.toThrow("The audit service could not be reached. Try again.");
+    await expect(runPageSpeedAudit(input, { apiKey: "k", fetchImpl: down })).rejects.toThrow("The audit service could not be reached. Try again.");
     const slow = (async () => {
       throw Object.assign(new Error("aborted"), { name: "TimeoutError" });
     }) as typeof fetch;
-    await expect(runPageSpeedAudit(input, { fetchImpl: slow })).rejects.toThrow(/took too long/);
+    await expect(runPageSpeedAudit(input, { apiKey: "k", fetchImpl: slow })).rejects.toThrow(/took too long/);
   });
 
   it("gives up before a typical serverless limit", () => {
@@ -97,6 +106,7 @@ describe("an audit job on a host without a browser", () => {
   it("finishes inside startAuditJob using PageSpeed Insights, with no browser launched", async () => {
     vi.stubEnv("NETLIFY", "true");
     vi.stubEnv("LIVE_BROWSER", "");
+    vi.stubEnv("PAGESPEED_API_KEY", "env-key");
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(respond(200, { lighthouseResult }));
     const job = await createAuditJob({ owner: "user:serverless-1", url: "https://example.com/", formFactor: "mobile" });
     await startAuditJob(job);
@@ -108,6 +118,7 @@ describe("an audit job on a host without a browser", () => {
 
   it("records a failed job with a readable message when the service refuses", async () => {
     vi.stubEnv("NETLIFY", "true");
+    vi.stubEnv("PAGESPEED_API_KEY", "env-key");
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.spyOn(globalThis, "fetch").mockImplementation(respond(429, { error: { message: "quota" } }));
     const job = await createAuditJob({ owner: "user:serverless-2", url: "https://example.com/", formFactor: "desktop" });
