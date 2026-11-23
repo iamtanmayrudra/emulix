@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { chromium, type Browser, type ConsoleMessage, type Request } from "playwright";
+import type { Browser, ConsoleMessage, Request } from "playwright";
 import type { DeviceProfile } from "@/lib/mock-data";
 import { guardPublicRequests } from "./route-guard";
 import { parseTargetUrl } from "./url-guard";
@@ -66,6 +66,8 @@ export async function runWebsiteTest(input: RunInput): Promise<RunResult> {
 
   let browser: Browser | null = null;
   try {
+    // Loaded here, not at the top, so a host without Playwright can still load this module (see testing/environment.ts).
+    const { chromium } = await import("playwright");
     browser = await chromium.launch({ headless: true, args: ["--disable-dev-shm-usage"] });
     const context = await browser.newContext({
       viewport,

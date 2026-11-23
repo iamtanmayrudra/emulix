@@ -3,6 +3,7 @@ import { rateLimited, readJsonBody, stringField } from "@/lib/auth/http";
 import { createAuditJob, startAuditJob } from "@/lib/audit/jobs";
 import { auditOwner } from "@/lib/audit/owner";
 import { AuditFailure } from "@/lib/audit/runner";
+import { hasLocalBrowser } from "@/lib/testing/environment";
 import type { FormFactor } from "@/lib/audit/summary";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -26,8 +27,13 @@ export async function POST(request: Request) {
   const formFactor: FormFactor = body.formFactor === "desktop" ? "desktop" : "mobile";
   try {
     const job = await createAuditJob({ owner, url: stringField(body, "url"), formFactor });
-    startAuditJob(job);
-    return NextResponse.json({ job }, { status: 202 });
+    if (hasLocalBrowser()) {
+      startAuditJob(job);
+      return NextResponse.json({ job }, { status: 202 });
+    }
+    // No browser here: the audit runs through PageSpeed Insights and finishes inside this request.
+    await startAuditJob(job);
+    return NextResponse.json({ job }, { status: 200 });
   } catch (error) {
     if (error instanceof AuditFailure) {
       return NextResponse.json({ error: error.code, message: error.message }, { status: STATUS_BY_CODE[error.code] });

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { errorResponse, rateLimited, readJsonBody, stringField } from "@/lib/auth/http";
 import { getCurrentUser } from "@/lib/auth/runtime";
 import { effectiveSubscription, platformGate } from "@/lib/org/runtime";
+import { BROWSER_UNAVAILABLE_MESSAGE, hasLocalBrowser } from "@/lib/testing/environment";
 import { JobFailure, createTestJob, planForUser, startTestJob, toPublicJob, userJobs } from "@/lib/testing/jobs";
 
 const STATUS_BY_CODE: Record<JobFailure["code"], number> = {
@@ -31,6 +32,10 @@ export async function GET() {
 export async function POST(request: Request) {
   const { user, response } = await requireUser();
   if (response) return response;
+
+  if (!hasLocalBrowser()) {
+    return NextResponse.json({ error: "browser_unavailable", message: BROWSER_UNAVAILABLE_MESSAGE }, { status: 503 });
+  }
 
   const limited = rateLimited(`test-jobs:${user!.id}`, 20, 60 * 60 * 1000);
   if (limited) return limited;

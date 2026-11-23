@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { chromium, type Browser, type BrowserContext, type CDPSession, type Page, type Request } from "playwright";
+import type { Browser, BrowserContext, CDPSession, Page, Request } from "playwright";
 import { DEVICE_PROFILES, type DeviceProfile, type Plan } from "@/lib/mock-data";
 import type { BugCapture } from "./bug-report";
 import { NAVIGATION_TIMEOUT_MS, type ConsoleEntry, type FailedRequest, type HttpErrorEntry } from "./runner";
@@ -207,7 +207,7 @@ export async function startBrowserSession(input: {
   try {
     browser =
       engine === "chromium"
-        ? await chromium.launch({ headless: true, args: ["--disable-dev-shm-usage"] })
+        ? await (await import("playwright")).chromium.launch({ headless: true, args: ["--disable-dev-shm-usage"] })
         : await (await webkitLauncher(engine)).launch({ headless: true });
     const context = await browser.newContext({
       viewport,

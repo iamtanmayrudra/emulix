@@ -3,6 +3,7 @@ import { errorResponse, rateLimited, readJsonBody, stringField } from "@/lib/aut
 import { getCurrentUser } from "@/lib/auth/runtime";
 import { effectiveSubscription, platformGate } from "@/lib/org/runtime";
 import { BrowserSessionFailure, startBrowserSession } from "@/lib/testing/browser-sessions";
+import { BROWSER_UNAVAILABLE_MESSAGE, hasLocalBrowser } from "@/lib/testing/environment";
 import { planForUser } from "@/lib/testing/jobs";
 
 /** Picking a device opens a browser on it, so browsing a dozen devices should not hit the limit. */
@@ -30,6 +31,10 @@ export async function POST(request: Request) {
   // A super admin controls accounts only, and a member without a seat cannot use the platform. New browsers are refused.
   const blocked = await platformGate(user, "POST /api/browser-sessions");
   if (blocked) return blocked;
+
+  if (!hasLocalBrowser()) {
+    return NextResponse.json({ error: "browser_unavailable", message: BROWSER_UNAVAILABLE_MESSAGE }, { status: 503 });
+  }
 
   const limited = rateLimited(`browser-sessions:${user.id}`, MAX_LAUNCHES_PER_HOUR, 60 * 60 * 1000);
   if (limited) return limited;

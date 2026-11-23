@@ -1,5 +1,5 @@
 import { createServer } from "node:net";
-import { chromium, type Browser } from "playwright";
+import type { Browser } from "playwright";
 import { parseTargetUrl, resolvesToPublicAddress } from "@/lib/testing/url-guard";
 import { startPublicOnlyProxy } from "./public-proxy";
 import { summarizeReport, type AuditResult, type FormFactor, type LighthouseReport } from "./summary";
@@ -44,6 +44,8 @@ export async function runLighthouseAudit(input: { url: string; formFactor: FormF
   let browser: Browser | null = null;
   try {
     const port = await freePort();
+    // Loaded here, not at the top, so a host without Playwright can still load this module (see testing/environment.ts).
+    const { chromium } = await import("playwright");
     browser = await chromium.launch({
       headless: true,
       args: [`--remote-debugging-port=${port}`],

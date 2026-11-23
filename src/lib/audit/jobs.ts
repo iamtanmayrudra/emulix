@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { parseTargetUrl, resolvesToPublicAddress } from "@/lib/testing/url-guard";
+import { hasLocalBrowser } from "@/lib/testing/environment";
+import { runPageSpeedAudit } from "./pagespeed";
 import { AuditFailure, runLighthouseAudit } from "./runner";
 import type { AuditResult, FormFactor } from "./summary";
 
@@ -63,15 +65,21 @@ export async function createAuditJob(input: { owner: string; url: string; formFa
   return job;
 }
 
-/** Runs the audit in the background and records the outcome on the job. Never throws. */
-export function startAuditJob(job: AuditJob): void {
+/**
+ * Runs the audit and records the outcome on the job. Never rejects. With a local browser it is a background job the
+ * caller does not wait for. Without one (a serverless host) the audit goes to PageSpeed Insights, and the caller must
+ * await the returned promise, because the function stops when its response is sent.
+ */
+export function startAuditJob(job: AuditJob): Promise<void> {
   job.status = "running";
 
   const timeout = new Promise<never>((_, reject) => {
     setTimeout(() => reject(new Error("timed_out")), AUDIT_TIMEOUT_MS).unref();
   });
 
-  Promise.race([runLighthouseAudit({ url: job.url, formFactor: job.formFactor }), timeout])
+  const run = hasLocalBrowser() ? runLighthouseAudit : runPageSpeedAudit;
+
+  return Promise.race([run({ url: job.url, formFactor: job.formFactor }), timeout])
     .then((result) => {
       job.result = result;
       job.status = "completed";
