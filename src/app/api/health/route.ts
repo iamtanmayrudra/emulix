@@ -22,6 +22,9 @@ export async function GET() {
         keyPresent: key.length > 0,
         // A Google API key starts with "AIza" and is 39 characters. False usually means a copy and paste mistake.
         keyLooksValid: /^AIza[0-9A-Za-z_-]{35}$/.test(key),
+        // Names only, never values: variables that look like this one but are spelled differently. A typo in the name
+        // (a space, "PAGESPEED_KEY", lower case) is the most common reason the real name is not found.
+        similarNames: Object.keys(process.env).filter((name) => /page|speed|google|api.?key/i.test(name) && name !== "PAGESPEED_API_KEY").sort(),
       },
     },
     { headers: { "Cache-Control": "no-store" } },
