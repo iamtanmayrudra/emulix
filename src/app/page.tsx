@@ -5,6 +5,7 @@ import { DevicePhoto, SHOWCASE_IDS } from "@/components/device-photo";
 import { Logo } from "@/components/logo";
 import { ReportShowcase } from "@/components/report-showcase";
 import { ServiceCards } from "@/components/service-cards";
+import { AuthSwitch } from "@/components/auth-switch";
 import { DEVICE_PROFILES } from "@/lib/mock-data";
 
 /** The sizes shown on the landing page. The full list lives in the app. */
@@ -79,15 +80,29 @@ export default function LandingPage() {
             <Link href="/pricing" className="whitespace-nowrap rounded-[3px] px-3 py-1.5 text-white/80 hover:bg-white/10 hover:text-white">
               Pricing
             </Link>
-            <Link href="/login" className="whitespace-nowrap rounded-[3px] px-3 py-1.5 text-white/80 hover:bg-white/10 hover:text-white">
-              Sign in
-            </Link>
-            <Link
-              href="/signup"
-              className="ml-2 whitespace-nowrap rounded-[3px] bg-accent px-3.5 py-1.5 font-semibold text-accent-foreground hover:opacity-90"
-            >
-              Get started
-            </Link>
+            <AuthSwitch
+              signedIn={
+                <Link
+                  href="/dashboard"
+                  className="ml-2 whitespace-nowrap rounded-[3px] bg-accent px-3.5 py-1.5 font-semibold text-accent-foreground hover:opacity-90"
+                >
+                  Dashboard
+                </Link>
+              }
+              signedOut={
+                <>
+                  <Link href="/login" className="whitespace-nowrap rounded-[3px] px-3 py-1.5 text-white/80 hover:bg-white/10 hover:text-white">
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="ml-2 whitespace-nowrap rounded-[3px] bg-accent px-3.5 py-1.5 font-semibold text-accent-foreground hover:opacity-90"
+                  >
+                    Get started
+                  </Link>
+                </>
+              }
+            />
           </nav>
         </div>
       </header>
@@ -113,12 +128,24 @@ export default function LandingPage() {
                 Load pages at phone, tablet, and desktop sizes, collect browser errors, and keep a report of each run.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3 md:justify-start">
-                <Link
-                  href="/signup"
-                  className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:shadow-xl"
-                >
-                  Get started free
-                </Link>
+                <AuthSwitch
+                  signedIn={
+                    <Link
+                      href="/dashboard"
+                      className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:shadow-xl"
+                    >
+                      Go to your dashboard
+                    </Link>
+                  }
+                  signedOut={
+                    <Link
+                      href="/signup"
+                      className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:shadow-xl"
+                    >
+                      Get started free
+                    </Link>
+                  }
+                />
                 <Link
                   href="/dashboard"
                   className="rounded-full border border-white/25 bg-white/5 px-6 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/15"
@@ -126,7 +153,10 @@ export default function LandingPage() {
                   Open the prototype
                 </Link>
               </div>
-              <p className="mt-4 text-xs text-white/60">No card needed. Free plan requires a verified email.</p>
+              <AuthSwitch
+                signedIn={<p className="mt-4 text-xs text-white/60">You are signed in.</p>}
+                signedOut={<p className="mt-4 text-xs text-white/60">No card needed. Free plan requires a verified email.</p>}
+              />
             </div>
             <DeviceCarousel />
           </div>
@@ -217,12 +247,24 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <Link
-                href="/signup"
-                className="mt-7 rounded-full border border-border px-4 py-2.5 text-center text-sm font-semibold transition hover:border-accent hover:text-accent"
-              >
-                Start free
-              </Link>
+              <AuthSwitch
+                signedIn={
+                  <Link
+                    href="/dashboard"
+                    className="mt-7 rounded-full border border-border px-4 py-2.5 text-center text-sm font-semibold transition hover:border-accent hover:text-accent"
+                  >
+                    Open your dashboard
+                  </Link>
+                }
+                signedOut={
+                  <Link
+                    href="/signup"
+                    className="mt-7 rounded-full border border-border px-4 py-2.5 text-center text-sm font-semibold transition hover:border-accent hover:text-accent"
+                  >
+                    Start free
+                  </Link>
+                }
+              />
             </div>
             <div className="relative flex flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-fuchsia-600 to-pink-500 p-[1.5px] shadow-xl shadow-fuchsia-500/20">
               <div className="flex flex-1 flex-col rounded-[calc(1rem-1px)] bg-surface p-7">
@@ -282,12 +324,24 @@ export default function LandingPage() {
             <div aria-hidden="true" className="pointer-events-none absolute -bottom-16 -right-16 h-56 w-56 rounded-full bg-fuchsia-500/30 blur-3xl" />
             <h2 className="relative text-3xl font-bold tracking-tight">Run your first check today.</h2>
             <p className="relative max-w-md text-sm text-white/75">Create a free account, then open the prototype and start a website run.</p>
-            <Link
-              href="/signup"
-              className="relative rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
-            >
-              Create a free account
-            </Link>
+            <AuthSwitch
+              signedIn={
+                <Link
+                  href="/dashboard"
+                  className="relative rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
+                >
+                  Open your dashboard
+                </Link>
+              }
+              signedOut={
+                <Link
+                  href="/signup"
+                  className="relative rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
+                >
+                  Create a free account
+                </Link>
+              }
+            />
           </div>
         </section>
       </main>
@@ -297,8 +351,15 @@ export default function LandingPage() {
           <Logo size={20} />
           <nav aria-label="Footer" className="flex gap-4">
             <Link href="/pricing" className="hover:text-foreground">Pricing</Link>
-            <Link href="/login" className="hover:text-foreground">Sign in</Link>
-            <Link href="/signup" className="hover:text-foreground">Sign up</Link>
+            <AuthSwitch
+              signedIn={<Link href="/dashboard" className="hover:text-foreground">Dashboard</Link>}
+              signedOut={
+                <>
+                  <Link href="/login" className="hover:text-foreground">Sign in</Link>
+                  <Link href="/signup" className="hover:text-foreground">Sign up</Link>
+                </>
+              }
+            />
           </nav>
           <p>Prototype with mock data. Not for production use.</p>
         </div>
