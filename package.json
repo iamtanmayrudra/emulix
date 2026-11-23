@@ -13,7 +13,8 @@
     "postinstall": "prisma generate",
     "db:migrate": "node --env-file=.env node_modules/prisma/build/index.js migrate deploy",
     "db:status": "node --env-file=.env node_modules/prisma/build/index.js migrate status",
-    "db:seed-demo": "node --env-file=.env scripts/seed-demo-user.mjs"
+    "db:seed-demo": "node --env-file=.env scripts/seed-demo-user.mjs",
+    "db:check": "node --env-file=.env scripts/check-database.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.1",

@@ -7,9 +7,9 @@ import { PrismaClient } from "@/generated/prisma/client";
  */
 const globalForPrisma = globalThis as typeof globalThis & { __emulixPrisma?: PrismaClient };
 
-/** DATABASE_URL, or NETLIFY_DATABASE_URL, which Netlify DB sets for you. Null when neither is set. */
+/** DATABASE_URL, or the NETLIFY_DB_URL that Netlify Database sets for you. Null when neither is set. */
 export function databaseUrl(env: NodeJS.ProcessEnv = process.env): string | null {
-  const url = (env.DATABASE_URL || env.NETLIFY_DATABASE_URL)?.trim();
+  const url = (env.DATABASE_URL || env.NETLIFY_DB_URL || env.NETLIFY_DATABASE_URL)?.trim();
   return url ? url : null;
 }
 

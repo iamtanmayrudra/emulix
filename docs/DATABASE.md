@@ -14,7 +14,7 @@ instance does not exist on the next, so sign-up worked and sign-in then failed. 
 1. Create a Postgres database. [Netlify DB](https://docs.netlify.com/build/data-and-storage/netlify-db/) (Neon) is the
    quickest on Netlify. Neon, Supabase and Railway also work.
 2. Put its connection string in `DATABASE_URL`: in `.env` for the commands below, and in the Netlify site's
-   environment variables for the running site. Netlify DB sets `NETLIFY_DATABASE_URL`, which is read too.
+   environment variables for the running site. Netlify Database sets `NETLIFY_DB_URL` for the running site, which is read too (see [NETLIFY_LOGIN_FIX.md](NETLIFY_LOGIN_FIX.md)).
 
    ```env
    DATABASE_URL=postgresql://user:password@host:5432/dbname?sslmode=require

@@ -13,7 +13,7 @@ import pg from "pg";
 
 const login = (process.env.DEMO_ADMIN_LOGIN || "admin").trim().toLowerCase();
 const password = process.env.DEMO_ADMIN_PASSWORD || "admin";
-const url = (process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL || "").trim();
+const url = (process.env.DATABASE_URL || process.env.NETLIFY_DB_URL || process.env.NETLIFY_DATABASE_URL || "").trim();
 
 if (!url) {
   console.error("DATABASE_URL is not set. Put it in .env first (see docs/DATABASE.md).");
