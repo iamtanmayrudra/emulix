@@ -228,8 +228,12 @@ export function DeviceLabPicker({ selectedId, plan, url, pageContent, focused = 
   if ((focused || detailOpen || live) && selected) {
     const blocked = selectedRestricted && !focused;
     return (
-      <section aria-label="Selected device" className="relative min-h-full">
-        <div className={blocked ? "pointer-events-none opacity-30 blur-[1px]" : ""} aria-hidden={blocked || undefined}>
+      // A column that fills the page, so the device inside it can sit in the middle of the page, up and down as well as across.
+      <section aria-label="Selected device" className="relative flex min-h-full flex-col">
+        <div
+          className={`flex flex-1 flex-col ${blocked ? "pointer-events-none opacity-30 blur-[1px]" : ""}`}
+          aria-hidden={blocked || undefined}
+        >
           <DeviceDetail
             selected={selected}
             plan={plan}

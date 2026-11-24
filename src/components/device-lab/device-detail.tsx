@@ -160,7 +160,7 @@ export function DeviceDetail({ selected, plan, url, screen, onScreenChange, onOp
 
   return (
     // The menu floats at the top left and the device sits in the middle of the page, with its details to the right.
-    <div className="relative flex min-h-full flex-col gap-6 pb-6 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:gap-10 lg:pb-0">
+    <div className="relative flex min-h-full flex-1 flex-col gap-6 pb-6 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:gap-10 lg:pb-0">
       <aside
         aria-label="Session menu"
         className={`z-10 w-full self-start overflow-hidden bg-surface shadow-lg lg:absolute lg:left-0 lg:top-0 lg:rounded-br-md ${collapsed ? "lg:w-24" : "lg:w-60"}`}
