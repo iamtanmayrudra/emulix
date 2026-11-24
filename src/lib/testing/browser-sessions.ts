@@ -55,7 +55,77 @@ const ALLOWED_KEYS = new Set([
   "End",
   "PageUp",
   "PageDown",
+  // Named actions, so the device cannot send arbitrary chords. The server turns them into the key combination for its OS.
+  "ShiftTab",
+  "SelectAll",
+  "Undo",
+  "Redo",
 ]);
+
+/** The key combination for each named action. The modifier is Meta on a Mac and Control everywhere else. */
+function chord(key: string): string {
+  const modifier = process.platform === "darwin" ? "Meta" : "Control";
+  switch (key) {
+    case "ShiftTab":
+      return "Shift+Tab";
+    case "SelectAll":
+      return `${modifier}+A`;
+    case "Undo":
+      return `${modifier}+Z`;
+    case "Redo":
+      return `${modifier}+Shift+Z`;
+    default:
+      return key;
+  }
+}
+
+/** The longest text a paste may carry. */
+const MAX_PASTE_LENGTH = 2_000;
+/** The longest value a date, time or colour picker can produce is far shorter than this. */
+const MAX_VALUE_LENGTH = 40;
+
+/**
+ * Chromium and WebKit open a drop-down, date or colour picker in a native window that a headless browser never draws,
+ * and then keep the keyboard for it. So the page ignores the press that would open one. The device shows its own list or
+ * picker instead (see PageControl), and the choice is written to the element.
+ */
+const NATIVE_POPUP_GUARD = `
+  (() => {
+    const pickerTypes = new Set(["date", "time", "datetime-local", "month", "week", "color"]);
+    addEventListener("mousedown", (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const select = target.closest("select");
+      if (select && !select.multiple && !(select.size > 1)) return event.preventDefault();
+      const input = target.closest("input");
+      if (input && pickerTypes.has(input.type)) event.preventDefault();
+    }, true);
+  })();
+`;
+
+const PICKER_INPUT_TYPES = ["date", "time", "datetime-local", "month", "week", "color"] as const;
+type PickerInputType = (typeof PICKER_INPUT_TYPES)[number];
+
+/** A control under the pointer that needs a picker of the device's own, because the browser's cannot be seen. */
+export type PageControl =
+  | {
+      kind: "select";
+      /** Where the control sits in the viewport, as 0 to 1 of its width and height. */
+      rect: { x: number; y: number; width: number; height: number };
+      options: { label: string; selected: boolean; disabled: boolean }[];
+    }
+  | {
+      kind: "value";
+      rect: { x: number; y: number; width: number; height: number };
+      inputType: PickerInputType;
+      value: string;
+      min: string;
+      max: string;
+      step: string;
+    };
+
+/** What an input returns. A press that ends on a drop-down or picker also returns that control. */
+export type InputResult = { control?: PageControl };
 
 export type BrowserSessionStatus = "live" | "closed";
 
@@ -76,8 +146,14 @@ export type PublicBrowserSession = {
 
 export type BrowserInput =
   | { type: "click"; x: number; y: number }
+  | { type: "down"; x: number; y: number; clickCount: number }
+  | { type: "up"; x: number; y: number; clickCount: number }
+  | { type: "move"; x: number; y: number }
   | { type: "wheel"; x: number; y: number; deltaY: number }
   | { type: "text"; text: string }
+  | { type: "paste"; text: string }
+  | { type: "select"; x: number; y: number; index: number }
+  | { type: "setValue"; x: number; y: number; value: string }
   | { type: "key"; key: string }
   | { type: "navigate"; url: string }
   | { type: "back" }
@@ -218,6 +294,7 @@ export async function startBrowserSession(input: {
       acceptDownloads: false,
       serviceWorkers: "block",
     });
+    await context.addInitScript({ content: NATIVE_POPUP_GUARD });
     const diagnostics = emptyDiagnostics();
     await guardPublicRequests(context, (blockedUrl) =>
       remember(diagnostics.failedRequests, { url: blockedUrl, reason: "Blocked: non-public address" }),
@@ -462,11 +539,46 @@ export function validateBrowserInput(value: unknown): { ok: true; input: Browser
       }
       return { ok: true, input: { type: "wheel", x, y, deltaY } };
     }
+    case "down":
+    case "up": {
+      const { x, y, clickCount } = body;
+      if (!isUnitInterval(x) || !isUnitInterval(y)) return { ok: false, reason: "Position is outside the page." };
+      const count = clickCount === undefined ? 1 : clickCount;
+      if (typeof count !== "number" || !Number.isInteger(count) || count < 1 || count > 3) {
+        return { ok: false, reason: "Click count must be 1, 2 or 3." };
+      }
+      return { ok: true, input: { type: body.type, x, y, clickCount: count } };
+    }
+    case "move": {
+      const { x, y } = body;
+      if (!isUnitInterval(x) || !isUnitInterval(y)) return { ok: false, reason: "Position is outside the page." };
+      return { ok: true, input: { type: "move", x, y } };
+    }
     case "text": {
       if (typeof body.text !== "string" || body.text.length === 0 || body.text.length > MAX_TEXT_LENGTH) {
         return { ok: false, reason: "Text must be between 1 and 500 characters." };
       }
       return { ok: true, input: { type: "text", text: body.text } };
+    }
+    case "paste": {
+      if (typeof body.text !== "string" || body.text.length === 0 || body.text.length > MAX_PASTE_LENGTH) {
+        return { ok: false, reason: `Pasted text must be between 1 and ${MAX_PASTE_LENGTH} characters.` };
+      }
+      return { ok: true, input: { type: "paste", text: body.text } };
+    }
+    case "select": {
+      const { x, y, index } = body;
+      if (!isUnitInterval(x) || !isUnitInterval(y)) return { ok: false, reason: "Position is outside the page." };
+      if (typeof index !== "number" || !Number.isInteger(index) || index < 0 || index > 5_000) {
+        return { ok: false, reason: "Choose one of the listed options." };
+      }
+      return { ok: true, input: { type: "select", x, y, index } };
+    }
+    case "setValue": {
+      const { x, y, value } = body;
+      if (!isUnitInterval(x) || !isUnitInterval(y)) return { ok: false, reason: "Position is outside the page." };
+      if (typeof value !== "string" || value.length > MAX_VALUE_LENGTH) return { ok: false, reason: "That value is not valid." };
+      return { ok: true, input: { type: "setValue", x, y, value } };
     }
     case "key": {
       if (typeof body.key !== "string" || !ALLOWED_KEYS.has(body.key)) return { ok: false, reason: "That key is not supported." };
@@ -490,52 +602,173 @@ function isUnitInterval(value: unknown): value is number {
 }
 
 /** Applies one input. Actions run in arrival order, and the call resolves once the page has handled it. */
-export function sendBrowserInput(userId: string, id: string, input: BrowserInput): Promise<void> {
+export function sendBrowserInput(userId: string, id: string, input: BrowserInput): Promise<InputResult> {
   const session = ownedSession(userId, id);
   if (!session || session.status !== "live") {
     return Promise.reject(new BrowserSessionFailure("not_found", "That browser session has ended."));
   }
   session.lastActivityAt = Date.now();
   const run = session.queue.then(() => apply(session, input));
-  session.queue = run.catch(() => undefined);
+  session.queue = run.then(
+    () => undefined,
+    () => undefined,
+  );
   return run.catch(() => {
     throw new BrowserSessionFailure("input_failed", "The page did not respond to that action.");
   });
 }
 
-async function apply(session: LiveSession, input: BrowserInput): Promise<void> {
+async function apply(session: LiveSession, input: BrowserInput): Promise<InputResult> {
   const { page, viewport } = session;
+  const px = (value: number) => value * viewport.width;
+  const py = (value: number) => value * viewport.height;
   switch (input.type) {
     case "click":
-      await page.mouse.click(input.x * viewport.width, input.y * viewport.height);
-      return;
+      await page.mouse.click(px(input.x), py(input.y));
+      return {};
+    case "down":
+      await page.mouse.move(px(input.x), py(input.y));
+      await page.mouse.down({ clickCount: input.clickCount });
+      return {};
+    case "up": {
+      await page.mouse.move(px(input.x), py(input.y));
+      await page.mouse.up({ clickCount: input.clickCount });
+      // A press that ends on a drop-down or a date or colour field cannot be seen in the picture. Describe it, so the
+      // device can show its own list or picker.
+      const control = await controlAt(page, px(input.x), py(input.y), viewport);
+      return control ? { control } : {};
+    }
+    case "move":
+      await page.mouse.move(px(input.x), py(input.y));
+      return {};
     case "wheel":
-      await page.mouse.move(input.x * viewport.width, input.y * viewport.height);
+      await page.mouse.move(px(input.x), py(input.y));
       await page.mouse.wheel(0, input.deltaY);
-      return;
+      return {};
     case "text":
       await page.keyboard.type(input.text);
-      return;
+      return {};
+    case "paste":
+      // Inserts the text into the focused field in one step, as a paste does. The page still gets its input events.
+      await page.keyboard.insertText(input.text);
+      return {};
     case "key":
-      await page.keyboard.press(input.key);
-      return;
+      await page.keyboard.press(chord(input.key));
+      return {};
+    case "select": {
+      const done = await page.evaluate(
+        ({ x, y, index }) => {
+          const select = document.elementFromPoint(x, y)?.closest("select");
+          if (!select || select.disabled || index >= select.options.length || select.options[index].disabled) return false;
+          select.selectedIndex = index;
+          select.dispatchEvent(new Event("input", { bubbles: true }));
+          select.dispatchEvent(new Event("change", { bubbles: true }));
+          return true;
+        },
+        { x: px(input.x), y: py(input.y), index: input.index },
+      );
+      if (!done) throw new Error("No drop-down at that position");
+      return {};
+    }
+    case "setValue": {
+      const done = await page.evaluate(
+        ({ x, y, value }) => {
+          const field = document.elementFromPoint(x, y)?.closest("input");
+          if (!field || field.disabled || field.readOnly) return false;
+          // The setter on the prototype, so frameworks that watch the value see the change.
+          Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(field, value);
+          field.dispatchEvent(new Event("input", { bubbles: true }));
+          field.dispatchEvent(new Event("change", { bubbles: true }));
+          return true;
+        },
+        { x: px(input.x), y: py(input.y), value: input.value },
+      );
+      if (!done) throw new Error("No field at that position");
+      return {};
+    }
     case "navigate": {
       const parsed = parseTargetUrl(input.url);
       if (!parsed.ok) throw new Error(parsed.reason);
       session.requestedUrl = parsed.url.toString();
       void page.goto(parsed.url.toString(), { waitUntil: "load", timeout: NAVIGATION_TIMEOUT_MS }).catch(() => undefined);
-      return;
+      return {};
     }
     case "back":
       void page.goBack({ waitUntil: "load", timeout: NAVIGATION_TIMEOUT_MS }).catch(() => undefined);
-      return;
+      return {};
     case "forward":
       void page.goForward({ waitUntil: "load", timeout: NAVIGATION_TIMEOUT_MS }).catch(() => undefined);
-      return;
+      return {};
     case "reload":
       void page.reload({ waitUntil: "load", timeout: NAVIGATION_TIMEOUT_MS }).catch(() => undefined);
-      return;
+      return {};
   }
+}
+
+/**
+ * Describes the drop-down, or the date, time or colour field, at a point in the page, or null when there is none.
+ * The page runs this itself, so it sees the real element. Only plain numbers go in, and only data comes out.
+ */
+async function controlAt(page: Page, x: number, y: number, viewport: { width: number; height: number }): Promise<PageControl | null> {
+  const found = await page
+    .evaluate(
+      ({ x, y, pickerTypes }) => {
+        const hit = document.elementFromPoint(x, y);
+        if (!hit) return null;
+        const box = (element: Element) => {
+          const r = element.getBoundingClientRect();
+          return { x: r.left, y: r.top, width: r.width, height: r.height };
+        };
+        const select = hit.closest("select");
+        if (select && !select.disabled && !select.multiple && !(select.size > 1)) {
+          return {
+            kind: "select" as const,
+            rect: box(select),
+            options: [...select.options].map((option) => ({
+              label: (option.label || option.text || "").slice(0, 120),
+              selected: option.selected,
+              disabled: option.disabled || (option.parentElement instanceof HTMLOptGroupElement && option.parentElement.disabled),
+            })),
+          };
+        }
+        const field = hit.closest("input");
+        if (field && !field.disabled && !field.readOnly && pickerTypes.includes(field.type)) {
+          return {
+            kind: "value" as const,
+            rect: box(field),
+            inputType: field.type,
+            value: field.value,
+            min: field.min,
+            max: field.max,
+            step: field.step,
+          };
+        }
+        return null;
+      },
+      { x, y, pickerTypes: [...PICKER_INPUT_TYPES] as string[] },
+    )
+    .catch(() => null);
+  if (!found) return null;
+
+  const rect = {
+    x: found.rect.x / viewport.width,
+    y: found.rect.y / viewport.height,
+    width: found.rect.width / viewport.width,
+    height: found.rect.height / viewport.height,
+  };
+  if (found.kind === "select") {
+    // A list this long is not a list a person can use on a phone. The first part is enough to pick from.
+    return { kind: "select", rect, options: found.options.slice(0, 500) };
+  }
+  return {
+    kind: "value",
+    rect,
+    inputType: found.inputType as PickerInputType,
+    value: found.value.slice(0, MAX_VALUE_LENGTH),
+    min: found.min.slice(0, MAX_VALUE_LENGTH),
+    max: found.max.slice(0, MAX_VALUE_LENGTH),
+    step: found.step.slice(0, MAX_VALUE_LENGTH),
+  };
 }
 
 export async function closeBrowserSession(userId: string, id: string): Promise<boolean> {

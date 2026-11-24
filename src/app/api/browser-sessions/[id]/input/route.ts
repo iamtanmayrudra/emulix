@@ -31,8 +31,9 @@ export async function POST(request: Request, { params }: Props) {
   }
 
   try {
-    await sendBrowserInput(user.id, id, checked.input);
-    return NextResponse.json({ ok: true });
+    // A press that ends on a drop-down or a date or colour field also returns that control, for the device to show.
+    const result = await sendBrowserInput(user.id, id, checked.input);
+    return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     if (error instanceof BrowserSessionFailure) {
       return NextResponse.json({ error: error.code, message: error.message }, { status: STATUS_BY_CODE[error.code] });
