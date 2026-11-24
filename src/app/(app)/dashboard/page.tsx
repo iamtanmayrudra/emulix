@@ -17,7 +17,8 @@ import { getCurrentUser } from "@/lib/auth/runtime";
 import { DEVICES } from "@/lib/device-lab/devices";
 import { canSelectProfile, planForStatus } from "@/lib/entitlements";
 import { effectiveSubscription } from "@/lib/org/runtime";
-import { MOCK_JOBS, MOCK_USAGE, MOCK_USER, PLAN_LIMITS } from "@/lib/mock-data";
+import { PLAN_LIMITS } from "@/lib/mock-data";
+import { dashboardTotals, recentJobs } from "@/lib/reports/dashboard";
 
 const ACTIONS = [
   {
@@ -48,25 +49,26 @@ async function DashboardPageContent() {
   const subscription = user ? effectiveSubscription(user) : "free";
   const plan = planForStatus(subscription);
   const limits = PLAN_LIMITS[plan];
-  const recentJobs = MOCK_JOBS.slice(0, 4);
-
-  const completed = MOCK_JOBS.filter((job) => job.status === "completed").length;
-  const successRate = MOCK_JOBS.length > 0 ? Math.round((completed / MOCK_JOBS.length) * 100) : 0;
+  // The signed-in user's own jobs, from the same record as the Reports page. Nothing here is a sample.
+  const jobs = user ? recentJobs(user.id) : [];
+  const totals = user
+    ? dashboardTotals(user.id)
+    : { total: 0, completed: 0, successRate: 0, auditsThisPeriod: 0 };
   const unlocked = DEVICES.filter((device) => canSelectProfile(plan, device)).length;
   const locked = DEVICES.length - unlocked;
-  const auditsLeft = Math.max(0, limits.auditsPerPeriod - MOCK_USAGE.auditsUsed);
+  const auditsLeft = Math.max(0, limits.auditsPerPeriod - totals.auditsThisPeriod);
   const countOf = (platform: "ios" | "android" | "desktop") => DEVICES.filter((device) => device.platform === platform).length;
 
   const stats = [
-    { label: "Tests run", value: String(MOCK_JOBS.length), hint: "Website, audit and APK jobs", gradient: "bg-gradient-to-br from-brand-blue to-brand-violet", icon: <GlobeIcon className="h-5 w-5" /> },
-    { label: "Completed", value: String(completed), hint: `${successRate}% finished without errors`, gradient: "bg-gradient-to-br from-emerald-400 to-teal-600", icon: <ReportIcon className="h-5 w-5" /> },
+    { label: "Tests run", value: String(totals.total), hint: "Website, audit and APK jobs", gradient: "bg-gradient-to-br from-brand-blue to-brand-violet", icon: <GlobeIcon className="h-5 w-5" /> },
+    { label: "Completed", value: String(totals.completed), hint: totals.total > 0 ? `${totals.successRate}% finished without errors` : "Run a test to see results here", gradient: "bg-gradient-to-br from-emerald-400 to-teal-600", icon: <ReportIcon className="h-5 w-5" /> },
     { label: "Devices ready", value: `${unlocked}/${DEVICES.length}`, hint: locked > 0 ? `${locked} more with Pro` : "Every device unlocked", gradient: "bg-gradient-to-br from-violet-400 to-fuchsia-600", icon: <PhoneIcon className="h-5 w-5" /> },
     { label: "Audits left", value: String(auditsLeft), hint: `of ${limits.auditsPerPeriod} this period`, gradient: "bg-gradient-to-br from-amber-400 to-rose-500", icon: <GaugeIcon className="h-5 w-5" /> },
   ];
 
   return (
     <div className="space-y-8">
-      <DashboardHero name={MOCK_USER.name} plan={plan} deviceCount={DEVICES.length} unlocked={unlocked} />
+      <DashboardHero name={user?.name ?? "there"} plan={plan} deviceCount={DEVICES.length} unlocked={unlocked} />
 
       <section aria-label="At a glance" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map((stat, index) => (
@@ -96,7 +98,22 @@ async function DashboardPageContent() {
               <ChevronRightIcon className="h-4 w-4" />
             </Link>
           </div>
-          <JobTimeline jobs={recentJobs} />
+          {jobs.length > 0 ? (
+            <JobTimeline jobs={jobs} />
+          ) : (
+            <div className="mt-5 rounded-xl border border-dashed border-border p-6 text-center">
+              <p className="text-sm font-medium">No jobs yet</p>
+              <p className="mt-1 text-sm text-muted">Tests and audits you run appear here.</p>
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                <Link href="/test" className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:opacity-90">
+                  Test a URL
+                </Link>
+                <Link href="/optimize" className="rounded-full border border-border px-4 py-2 text-sm font-semibold hover:border-accent hover:text-accent">
+                  Run an audit
+                </Link>
+              </div>
+            </div>
+          )}
         </section>
 
         <div className="min-w-0 space-y-6">
@@ -104,8 +121,8 @@ async function DashboardPageContent() {
             <h2 id="usage" className="text-lg font-semibold tracking-tight">
               Usage this period
             </h2>
-            <UsageRing label="Audits" used={MOCK_USAGE.auditsUsed} limit={limits.auditsPerPeriod} from="#38bdf8" to="#6b3df0" />
-            <UsageRing label="APK uploads" used={MOCK_USAGE.apkUploadsUsed} limit={limits.apkUploadsPerPeriod} from="#34d399" to="#0d9488" />
+            <UsageRing label="Audits" used={totals.auditsThisPeriod} limit={limits.auditsPerPeriod} from="#38bdf8" to="#6b3df0" />
+            <UsageRing label="APK uploads" used={0} limit={limits.apkUploadsPerPeriod} from="#34d399" to="#0d9488" />
           </section>
 
           <section aria-labelledby="coverage" className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
