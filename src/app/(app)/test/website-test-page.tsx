@@ -129,17 +129,17 @@ export default function WebsiteTestPage() {
         body: JSON.stringify({ url: target, profileId: chosenProfile, landscape: false }),
       });
       const data = (await response.json().catch(() => ({}))) as ApiError & { session?: PublicBrowserSession };
+      if (launch !== launchRef.current) {
+        // A newer launch started, or the tester cancelled, while this one was opening. Close the browser it started.
+        if (data.session) void closeSession(data.session.id);
+        return;
+      }
       if (!response.ok || !data.session) {
         if (data.error === "plan_required") {
           setUpgrade({ title: "This device needs Pro", message: data.message ?? "Upgrade to Pro to use it." });
         } else {
           setFormError(data.message ?? "The browser could not start. Try again.");
         }
-        return;
-      }
-      if (launch !== launchRef.current) {
-        // A newer launch started while this one was opening. Keep only the newest browser.
-        void closeSession(data.session.id);
         return;
       }
       setSession(data.session);
@@ -304,6 +304,17 @@ export default function WebsiteTestPage() {
     setStarted(false);
   }
 
+  /**
+   * Cancels the session at any point: while its browser is still opening, or while it runs. A browser that is still on
+   * its way is closed as soon as it arrives, because the launch counter no longer matches.
+   */
+  function handleCancel() {
+    launchRef.current += 1;
+    setSubmitting(false);
+    setFormError(null);
+    handleEdit();
+  }
+
   const sessionMode = started || deviceOpen;
   const actionClass =
     "flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium hover:bg-background focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-60";
@@ -399,6 +410,17 @@ export default function WebsiteTestPage() {
                 ) : undefined
               }
               focused={started}
+              infoAction={
+                started || submitting ? (
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="rounded-[3px] border border-neutral-500 px-4 py-1.5 text-sm font-medium hover:border-danger hover:text-danger focus-visible:outline-2 focus-visible:outline-accent"
+                  >
+                    Cancel session
+                  </button>
+                ) : undefined
+              }
               beside={
                 started ? (
                   second ? (
@@ -451,6 +473,17 @@ export default function WebsiteTestPage() {
               Two separate buttons, not one that changes type. A single button that flips from "button" to "submit"
               while React handles its own click would submit the form straight after "Edit test" is pressed.
             */}
+            {/* While a browser is opening, the tester can still back out. */}
+            {submitting && !started && (
+              <button
+                key="cancel"
+                type="button"
+                onClick={handleCancel}
+                className="rounded-md border border-border px-5 py-2 text-sm font-semibold hover:border-danger hover:text-danger focus-visible:outline-2 focus-visible:outline-accent"
+              >
+                Cancel
+              </button>
+            )}
             {started ? (
               <button
                 key="edit"

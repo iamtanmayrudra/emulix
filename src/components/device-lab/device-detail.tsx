@@ -36,6 +36,8 @@ type Props = {
   pageContent?: ReactNode;
   /** Shown beside the device: the plus button that adds a second device, or the second device itself. */
   beside?: ReactNode;
+  /** Shown under the device details: the button that cancels the session while it opens or runs. */
+  infoAction?: ReactNode;
 };
 
 type MenuItemProps = {
@@ -130,7 +132,7 @@ function ChargerCable() {
  * Screen for one device, laid out as a live session: a tool menu on the left, the device in the middle, and what the user
  * is testing on at the right. On iOS, Chrome and Safari open from the device's own home screen.
  */
-export function DeviceDetail({ selected, plan, url, screen, onScreenChange, onOpenDevices, action, pageContent, beside }: Props) {
+export function DeviceDetail({ selected, plan, url, screen, onScreenChange, onOpenDevices, action, pageContent, beside, infoAction }: Props) {
   const controls = useBrowserControls();
   const [zoom, setZoom] = useState(1);
   const [collapsed, setCollapsed] = useState(false);
@@ -303,6 +305,7 @@ export function DeviceDetail({ selected, plan, url, screen, onScreenChange, onOp
           ))}
         </dl>
         <p className="mt-2 text-left text-[11px] text-muted">Demo inventory.</p>
+        {infoAction && <div className="mt-4">{infoAction}</div>}
         {plan === "free" && (
           <Link
             href="/pricing"
