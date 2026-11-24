@@ -16,7 +16,7 @@ describe("recent jobs on the dashboard", () => {
   it("is empty for someone who has run nothing, instead of showing example rows", () => {
     const userId = newUser();
     expect(recentJobs(userId)).toEqual([]);
-    expect(dashboardTotals(userId)).toEqual({ total: 0, completed: 0, successRate: 0, auditsThisPeriod: 0 });
+    expect(dashboardTotals(userId)).toEqual({ total: 0, completed: 0, successRate: 0, auditsThisPeriod: 0, apkUploadsThisPeriod: 0 });
   });
 
   it("lists a live session with its address, device and time, in the Reports page format", () => {

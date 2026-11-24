@@ -107,12 +107,12 @@ export function listReports(userId: string): ReportEntry[] {
   for (const session of listSessions(userId)) {
     entries.push({
       id: `live:${session.id}`,
-      kind: "website",
+      kind: session.kind ?? "website",
       sample: false,
       target: session.url,
       device: session.profileName,
       // A session still open is running. One that has ended finished normally.
-      status: session.endedAt ? "completed" : "running",
+      status: session.failed ? "failed" : session.endedAt ? "completed" : "running",
       startedAt: session.startedAt,
       durationMs: duration(session.startedAt, session.endedAt),
       finalUrl: session.finalUrl,

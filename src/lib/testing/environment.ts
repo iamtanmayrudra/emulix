@@ -11,8 +11,12 @@ export function hasLocalBrowser(env: Record<string, string | undefined> = proces
   const setting = env.LIVE_BROWSER?.trim().toLowerCase();
   if (setting === "on") return true;
   if (setting === "off") return false;
-  const serverless = env.NETLIFY === "true" || Boolean(env.AWS_LAMBDA_FUNCTION_NAME) || Boolean(env.VERCEL);
-  return !serverless;
+  return !isServerlessHost(env);
+}
+
+/** Netlify, AWS Lambda and Vercel run each request in a short-lived function: no browser, no emulator, no memory kept. */
+export function isServerlessHost(env: Record<string, string | undefined> = process.env): boolean {
+  return env.NETLIFY === "true" || Boolean(env.AWS_LAMBDA_FUNCTION_NAME) || Boolean(env.VERCEL);
 }
 
 export const BROWSER_UNAVAILABLE_MESSAGE =

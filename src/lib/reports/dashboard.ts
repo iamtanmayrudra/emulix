@@ -38,6 +38,8 @@ export type DashboardTotals = {
   successRate: number;
   /** Audits started in the current calendar month (UTC), which is the period the plan limits count. */
   auditsThisPeriod: number;
+  /** APK tests started in the current calendar month (UTC). */
+  apkUploadsThisPeriod: number;
 };
 
 export function dashboardTotals(userId: string, now: Date = new Date()): DashboardTotals {
@@ -49,5 +51,7 @@ export function dashboardTotals(userId: string, now: Date = new Date()): Dashboa
     completed,
     successRate: entries.length > 0 ? Math.round((completed / entries.length) * 100) : 0,
     auditsThisPeriod: entries.filter((entry) => entry.kind === "audit" && entry.startedAt.slice(0, 7) === month).length,
+    // A test that could not start (the app would not install, or the server had no room) does not use up a test.
+    apkUploadsThisPeriod: entries.filter((entry) => entry.kind === "apk" && entry.status !== "failed" && entry.startedAt.slice(0, 7) === month).length,
   };
 }

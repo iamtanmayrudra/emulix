@@ -53,7 +53,7 @@ async function DashboardPageContent() {
   const jobs = user ? recentJobs(user.id) : [];
   const totals = user
     ? dashboardTotals(user.id)
-    : { total: 0, completed: 0, successRate: 0, auditsThisPeriod: 0 };
+    : { total: 0, completed: 0, successRate: 0, auditsThisPeriod: 0, apkUploadsThisPeriod: 0 };
   const unlocked = DEVICES.filter((device) => canSelectProfile(plan, device)).length;
   const locked = DEVICES.length - unlocked;
   const auditsLeft = Math.max(0, limits.auditsPerPeriod - totals.auditsThisPeriod);
@@ -122,7 +122,7 @@ async function DashboardPageContent() {
               Usage this period
             </h2>
             <UsageRing label="Audits" used={totals.auditsThisPeriod} limit={limits.auditsPerPeriod} from="#38bdf8" to="#6b3df0" />
-            <UsageRing label="APK uploads" used={0} limit={limits.apkUploadsPerPeriod} from="#34d399" to="#0d9488" />
+            <UsageRing label="APK uploads" used={totals.apkUploadsThisPeriod} limit={limits.apkUploadsPerPeriod} from="#34d399" to="#0d9488" />
           </section>
 
           <section aria-labelledby="coverage" className="rounded-2xl border border-border bg-surface p-5 shadow-sm">

@@ -13,6 +13,10 @@ export type SessionRecord = {
   /** The page the browser was on when the session ended. */
   finalUrl: string | null;
   title: string | null;
+  /** A live website session, or an APK running on an Android emulator. Missing means a website. */
+  kind?: "website" | "apk";
+  /** The session could not run, for example because an app would not install. */
+  failed?: boolean;
 };
 
 const MAX_KEPT_PER_USER = 100;
@@ -24,7 +28,7 @@ function records(): Map<string, SessionRecord> {
   return globalForHistory.__emulixSessionHistory;
 }
 
-export function recordSessionStart(input: Pick<SessionRecord, "id" | "userId" | "url" | "profileName" | "startedAt">): void {
+export function recordSessionStart(input: Pick<SessionRecord, "id" | "userId" | "url" | "profileName" | "startedAt" | "kind">): void {
   records().set(input.id, { ...input, endedAt: null, finalUrl: null, title: null });
 
   // Keep the newest sessions and drop the oldest finished ones.
@@ -34,10 +38,11 @@ export function recordSessionStart(input: Pick<SessionRecord, "id" | "userId" | 
   }
 }
 
-export function recordSessionEnd(id: string, finalUrl: string, title: string): void {
+export function recordSessionEnd(id: string, finalUrl: string, title: string, failed = false): void {
   const record = records().get(id);
   if (!record || record.endedAt) return;
   record.endedAt = new Date().toISOString();
+  if (failed) record.failed = true;
   record.finalUrl = finalUrl;
   record.title = title || null;
 }
