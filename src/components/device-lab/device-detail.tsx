@@ -34,6 +34,8 @@ type Props = {
   /** The session action at the bottom of the menu: start the test, or stop it. */
   action?: ReactNode;
   pageContent?: ReactNode;
+  /** Shown beside the device: the plus button that adds a second device, or the second device itself. */
+  beside?: ReactNode;
 };
 
 type MenuItemProps = {
@@ -128,7 +130,7 @@ function ChargerCable() {
  * Screen for one device, laid out as a live session: a tool menu on the left, the device in the middle, and what the user
  * is testing on at the right. On iOS, Chrome and Safari open from the device's own home screen.
  */
-export function DeviceDetail({ selected, plan, url, screen, onScreenChange, onOpenDevices, action, pageContent }: Props) {
+export function DeviceDetail({ selected, plan, url, screen, onScreenChange, onOpenDevices, action, pageContent, beside }: Props) {
   const controls = useBrowserControls();
   const [zoom, setZoom] = useState(1);
   const [collapsed, setCollapsed] = useState(false);
@@ -267,17 +269,21 @@ export function DeviceDetail({ selected, plan, url, screen, onScreenChange, onOp
         )}
       </aside>
 
-      <div className="flex min-w-0 flex-col items-center py-4 lg:col-start-2">
-        {/* Before the test starts, the device is on charge: the lead slides up and seats in its port. */}
-        <DevicePicture
-          device={selected}
-          screen={screen}
-          url={url}
-          onScreenChange={onScreenChange}
-          pageContent={pageContent}
-          zoom={zoom}
-          cable={hasCable ? <ChargerCable /> : undefined}
-        />
+      {/* The device, and beside it the plus button or the second device. They wrap onto two rows on a narrow page. */}
+      <div className="flex min-w-0 flex-wrap items-start justify-center gap-8 py-4 lg:col-start-2">
+        <div className="flex min-w-0 flex-col items-center">
+          {/* Before the test starts, the device is on charge: the lead slides up and seats in its port. */}
+          <DevicePicture
+            device={selected}
+            screen={screen}
+            url={url}
+            onScreenChange={onScreenChange}
+            pageContent={pageContent}
+            zoom={zoom}
+            cable={hasCable ? <ChargerCable /> : undefined}
+          />
+        </div>
+        {beside}
       </div>
 
       <aside aria-label="Device information" className="mx-4 text-sm lg:col-start-3 lg:mx-0 lg:max-w-[16rem] lg:justify-self-start lg:text-center">

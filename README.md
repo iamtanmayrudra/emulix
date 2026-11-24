@@ -82,7 +82,9 @@ npm run dev
 Open http://localhost:3000. In development only, a seeded account signs in with the login `admin` and the
 password `admin`. It has Pro so every device can be tested. A second account, `free` / `free`, is on the Free plan.
 A demo organization for the super admin scenarios (`superadmin`, `alice`, `bob`, `carol`, `dave`, `erin`, each with the
-login as the password) is described in [docs/SUPER_ADMIN.md](docs/SUPER_ADMIN.md). None of these are created in production.
+login as the password) is described in [docs/SUPER_ADMIN.md](docs/SUPER_ADMIN.md).
+
+To run every feature, including live devices and audits, on a server, see [docs/DEPLOY_SERVER.md](docs/DEPLOY_SERVER.md). What Netlify can and cannot run is in [docs/NETLIFY_LIMITS.md](docs/NETLIFY_LIMITS.md). None of these are created in production.
 
 ## Routes
 

@@ -45,6 +45,8 @@ type Props = {
   onDeviceOpenChange?: (open: boolean) => void;
   /** Start or stop control for the session menu. */
   sessionAction?: ReactNode;
+  /** Shown beside the open device: the plus button for a second device, or the second device. */
+  beside?: ReactNode;
 };
 
 /**
@@ -53,7 +55,7 @@ type Props = {
  * A platform opens as a list: a category column beside device columns. Clicking a device opens its screen.
  * On a device screen, the device switcher opens as an overlay over the screen.
  */
-export function DeviceLabPicker({ selectedId, plan, url, pageContent, focused = false, onSelect, onDeviceOpenChange, sessionAction }: Props) {
+export function DeviceLabPicker({ selectedId, plan, url, pageContent, focused = false, onSelect, onDeviceOpenChange, sessionAction, beside }: Props) {
   const [view, setView] = useState<DeviceView>(() => findDevice(selectedId)?.platform ?? "ios");
   const [category, setCategory] = useState<DeviceCategory | null>(null);
   const [osVersion, setOsVersion] = useState<string | null>(null);
@@ -237,6 +239,7 @@ export function DeviceLabPicker({ selectedId, plan, url, pageContent, focused = 
             pageContent={pageContent}
             onOpenDevices={() => setSwitcherOpen(true)}
             action={sessionAction}
+            beside={beside}
           />
         </div>
         {blocked && (

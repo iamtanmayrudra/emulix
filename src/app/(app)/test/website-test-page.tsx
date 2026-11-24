@@ -10,6 +10,7 @@ import { DevtoolsPanel } from "@/components/device-lab/devtools-panel";
 import { PlayIcon, StopIcon } from "@/components/device-lab/icons";
 import { LiveBrowser } from "@/components/device-lab/live-browser";
 import { PromotionBanner } from "@/components/device-lab/promotion-banner";
+import { AddDeviceButton, DeviceChooserDialog, SecondDevice } from "@/components/device-lab/second-device";
 import { LoadingRegion, Skeleton } from "@/components/skeleton";
 import { TestSidebar } from "@/components/test-sidebar";
 import { UpgradeNotice } from "@/components/upgrade-notice";
@@ -84,6 +85,11 @@ export default function WebsiteTestPage() {
   const sessionRef = useRef<string | null>(null);
   /** Counts launches, so an older launch that finishes late is closed instead of replacing a newer one. */
   const launchRef = useRef(0);
+  /** The second device, added with the plus button. Its session is null while the browser opens. */
+  const [second, setSecond] = useState<{ device: Device; session: PublicBrowserSession | null } | null>(null);
+  const [chooserOpen, setChooserOpen] = useState(false);
+  const secondRef = useRef<string | null>(null);
+  const secondLaunchRef = useRef(0);
 
   const device: Device = findDevice(profileId) ?? DEVICES[0];
   const restricted = !canSelectProfile(plan, device);
@@ -94,10 +100,11 @@ export default function WebsiteTestPage() {
     sessionRef.current = session?.id ?? null;
   }, [session]);
 
-  // Close the browser when the page is left, and when the tab is closed (React does not unmount then).
+  // Close the browsers when the page is left, and when the tab is closed (React does not unmount then).
   useEffect(() => {
     function release() {
       if (sessionRef.current) void closeSession(sessionRef.current);
+      if (secondRef.current) void closeSession(secondRef.current);
     }
     window.addEventListener("pagehide", release);
     return () => {
@@ -142,6 +149,67 @@ export default function WebsiteTestPage() {
       if (launch === launchRef.current) setFormError("Network error. Check your connection and try again.");
     } finally {
       if (launch === launchRef.current) setSubmitting(false);
+    }
+  }
+
+  /** Closes the second device and its browser, and brings the plus button back. */
+  function closeSecond() {
+    secondLaunchRef.current += 1;
+    if (secondRef.current) void closeSession(secondRef.current);
+    secondRef.current = null;
+    setSecond(null);
+  }
+
+  /** The plus button. A second device runs a second browser at once, which is a Pro feature. */
+  function handleAddDevice() {
+    if (plan !== "pro") {
+      setUpgrade({
+        title: "Two devices need Pro",
+        message: "Upgrade to Pro to test the same page on two devices at once.",
+      });
+      return;
+    }
+    setChooserOpen(true);
+  }
+
+  /** Opens the second device on the page the first device is on now. */
+  async function startSecond(next: Device) {
+    setChooserOpen(false);
+    if (!canSelectProfile(plan, next)) {
+      setUpgrade({ title: "This device needs Pro", message: `${next.name} is a Pro device. Upgrade to Pro to use it.` });
+      return;
+    }
+    const launch = ++secondLaunchRef.current;
+    setFormError(null);
+    setSecond({ device: next, session: null });
+    try {
+      const response = await fetch("/api/browser-sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: pageUrl, profileId: next.id, landscape: false }),
+      });
+      const data = (await response.json().catch(() => ({}))) as ApiError & { session?: PublicBrowserSession };
+      if (launch !== secondLaunchRef.current) {
+        // The second device was closed while it was opening. Close the browser that just started.
+        if (data.session) void closeSession(data.session.id);
+        return;
+      }
+      if (!response.ok || !data.session) {
+        setSecond(null);
+        if (data.error === "plan_required" || data.error === "concurrency_limit") {
+          setUpgrade({ title: "Two devices need Pro", message: data.message ?? "Upgrade to Pro to test on two devices at once." });
+        } else {
+          setFormError(data.message ?? "The second browser could not start. Try again.");
+        }
+        return;
+      }
+      secondRef.current = data.session.id;
+      setSecond({ device: next, session: data.session });
+    } catch {
+      if (launch === secondLaunchRef.current) {
+        setSecond(null);
+        setFormError("Network error. Check your connection and try again.");
+      }
     }
   }
 
@@ -232,6 +300,7 @@ export default function WebsiteTestPage() {
     if (sessionRef.current) void closeSession(sessionRef.current);
     sessionRef.current = null;
     setSession(null);
+    closeSecond();
     setStarted(false);
   }
 
@@ -330,6 +399,15 @@ export default function WebsiteTestPage() {
                 ) : undefined
               }
               focused={started}
+              beside={
+                started ? (
+                  second ? (
+                    <SecondDevice key={second.device.id} device={second.device} session={second.session} onClose={closeSecond} />
+                  ) : (
+                    <AddDeviceButton disabled={!liveSession} onClick={handleAddDevice} />
+                  )
+                ) : undefined
+              }
               onSelect={handleSelectDevice}
               onDeviceOpenChange={setDeviceOpen}
               sessionAction={sessionAction}
@@ -397,6 +475,8 @@ export default function WebsiteTestPage() {
         </div>
         )}
       </form>
+
+      {chooserOpen && <DeviceChooserDialog plan={plan} onChoose={(chosen) => void startSecond(chosen)} onClose={() => setChooserOpen(false)} />}
 
       {bug && <BugCapturePanel capture={bug} onClose={() => setBug(null)} />}
 
