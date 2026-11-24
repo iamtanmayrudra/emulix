@@ -17,8 +17,17 @@ import {
 
 const run = promisify(execFile);
 
-/** How long the emulator gets to finish starting. A cold start on a busy machine takes a minute or two. */
-const BOOT_TIMEOUT_MS = 240_000;
+/**
+ * How long the emulator gets to finish starting. A cold start takes two to four minutes on a machine with little free
+ * memory, so the default allows seven. ANDROID_BOOT_TIMEOUT_SECONDS changes it.
+ */
+function bootTimeoutMs(env: Record<string, string | undefined>): number {
+  const seconds = Number(env.ANDROID_BOOT_TIMEOUT_SECONDS);
+  return Number.isFinite(seconds) && seconds >= 30 ? seconds * 1000 : 420_000;
+}
+
+/** The phone is shown this many pixels wide. A smaller screen is lighter for the emulator and for the pictures sent back. */
+const STREAM_WIDTH = 720;
 const FIRST_CONSOLE_PORT = 5556;
 const LAST_CONSOLE_PORT = 5584;
 const MAX_LOG_BYTES = 16 * 1024;
@@ -63,6 +72,28 @@ function startFailure(log: string): string {
     return "This server cannot accelerate the Android emulator (virtualization is off or missing).";
   }
   return "The Android emulator could not start.";
+}
+
+/** The screen size from `wm size`: the override when one is set, otherwise the physical size. */
+export function parseScreenSize(output: string): { width: number; height: number } | null {
+  const line = output.match(/Override size:\s*(\d+)x(\d+)/) ?? output.match(/Physical size:\s*(\d+)x(\d+)/) ?? output.match(/(\d+)x(\d+)/);
+  return line ? { width: Number(line[1]), height: Number(line[2]) } : null;
+}
+
+/** Makes the phone's screen STREAM_WIDTH pixels wide, with the same shape and the same apparent size, if it is wider. */
+async function shrinkScreen(tools: AndroidTools, serial: string): Promise<void> {
+  try {
+    const size = parseScreenSize((await adb(tools, serial, ["shell", "wm", "size"], 10_000)).replace(/Override size:.*\r?\n?/, ""));
+    const density = Number((await adb(tools, serial, ["shell", "wm", "density"], 10_000)).match(/Physical density:\s*(\d+)/)?.[1]);
+    if (!size || size.width <= STREAM_WIDTH || !Number.isFinite(density)) return;
+    const height = Math.round((size.height * STREAM_WIDTH) / size.width);
+    const scaledDensity = Math.round((density * STREAM_WIDTH) / size.width);
+    await adb(tools, serial, ["shell", `wm size ${STREAM_WIDTH}x${height}; wm density ${scaledDensity}`], 15_000);
+    // The screen redraws at the new size. Give it a moment before the first picture.
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
+  } catch {
+    // The phone still works at its own size, just heavier.
+  }
 }
 
 /** A shell on the phone that stays open, so each tap does not pay for starting a new adb process. */
@@ -279,7 +310,7 @@ export function createAndroidRuntime(env: Record<string, string | undefined> = p
       };
 
       onPhase("booting");
-      const deadline = Date.now() + BOOT_TIMEOUT_MS;
+      const deadline = Date.now() + bootTimeoutMs(env);
       let booted = false;
       while (Date.now() < deadline) {
         if (exited) return fail(startFailure(log));
@@ -295,22 +326,23 @@ export function createAndroidRuntime(env: Record<string, string | undefined> = p
       }
       if (!booted) return fail("The Android emulator took too long to start.");
 
-      // No animations, and a screen that never turns off, so what the tester sees is the app.
+      // No animations, a screen that never turns off, and no "not responding" pop-ups, which appear on a busy host and
+      // would cover the app. What the tester sees is the app.
       await adb(
         tools,
         serial,
         [
           "shell",
-          "settings put global window_animation_scale 0; settings put global transition_animation_scale 0; settings put global animator_duration_scale 0; settings put system screen_off_timeout 2147483647; svc power stayon true; input keyevent 82",
+          "settings put global window_animation_scale 0; settings put global transition_animation_scale 0; settings put global animator_duration_scale 0; settings put global hide_error_dialogs 1; settings put system screen_off_timeout 2147483647; svc power stayon true; input keyevent 82",
         ],
         20_000,
       ).catch(() => undefined);
 
-      const sizeText = await adb(tools, serial, ["shell", "wm", "size"], 10_000).catch(() => "");
-      const size = sizeText.match(/(\d+)x(\d+)/);
-      if (!size) return fail("The emulator's screen size could not be read.");
+      await shrinkScreen(tools, serial);
+      const size = parseScreenSize(await adb(tools, serial, ["shell", "wm", "size"], 10_000).catch(() => ""));
+      if (!size) return fail("The emulator screen size could not be read.");
 
-      return new EmulatorDevice(tools, proc, new PhoneShell(tools, serial), port, serial, Number(size[1]), Number(size[2]));
+      return new EmulatorDevice(tools, proc, new PhoneShell(tools, serial), port, serial, size.width, size.height);
     },
   };
 }

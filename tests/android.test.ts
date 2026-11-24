@@ -13,6 +13,7 @@ import {
   type AndroidRuntime,
   type BootPhase,
 } from "../src/lib/android/device";
+import { parseScreenSize } from "../src/lib/android/runtime";
 import { androidSupport, findAndroidTools, forgetAndroidSupport } from "../src/lib/android/sdk";
 import {
   ANDROID_IDLE_MS,
@@ -129,6 +130,15 @@ describe("commands for the phone", () => {
     expect(textCommand("😀")).toBeNull();
     expect(textCommand("")).toBeNull();
     expect(textCommand("a".repeat(500))).toBe(`input text '${"a".repeat(200)}'`);
+  });
+});
+
+describe("reading the phone's screen size", () => {
+  it("uses the override when one is set, and the physical size otherwise", () => {
+    expect(parseScreenSize("Physical size: 1080x2400\n")).toEqual({ width: 1080, height: 2400 });
+    expect(parseScreenSize("Physical size: 1080x2400\nOverride size: 720x1600\n")).toEqual({ width: 720, height: 1600 });
+    expect(parseScreenSize("garbage")).toBeNull();
+    expect(parseScreenSize("")).toBeNull();
   });
 });
 
