@@ -45,3 +45,6 @@ next-env.d.ts
 
 # generated Prisma client (created by npm install / npm run build)
 /src/generated/
+
+# a second build folder, used when a second server runs beside the main one (NEXT_DIST_DIR)
+/.next-*/
