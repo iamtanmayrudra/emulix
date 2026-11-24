@@ -148,7 +148,7 @@ export function DeviceCarousel() {
               }}
             >
               <div className={active ? "drop-shadow-[0_25px_35px_rgba(0,0,0,0.45)]" : ""}>
-                <DevicePhoto id={slide.id} height={DEVICE_HEIGHT} variant={slide.variant} />
+                <DevicePhoto id={slide.id} height={DEVICE_HEIGHT} variant={slide.variant} aboveTheFold />
               </div>
             </div>
           );

@@ -141,7 +141,7 @@ export function AuthStage() {
         style={{ transform: "translate3d(calc(var(--px) * -12px), calc(var(--py) * -8px), 0) rotate(-4deg)" }}
       >
         <div className="stage-float drop-shadow-[0_25px_35px_rgba(0,0,0,0.45)]">
-          <DevicePhoto id="ipad-air" height={340}>
+          <DevicePhoto id="ipad-air" height={340} aboveTheFold>
             <TabletScreen state={state} />
           </DevicePhoto>
         </div>
@@ -152,7 +152,7 @@ export function AuthStage() {
         style={{ transform: "translate3d(calc(var(--px) * 18px), calc(var(--py) * 12px), 0) rotate(3deg)" }}
       >
         <div className="stage-float drop-shadow-[0_25px_35px_rgba(0,0,0,0.5)] [animation-delay:-3s]">
-          <DevicePhoto id="iphone-se" height={300}>
+          <DevicePhoto id="iphone-se" height={300} aboveTheFold>
             <PhoneScreen state={state} />
           </DevicePhoto>
         </div>

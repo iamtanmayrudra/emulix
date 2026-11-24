@@ -73,12 +73,15 @@ export function DevicePhoto({
   height,
   variant = "result",
   children,
+  aboveTheFold = false,
 }: {
   id: ShowcaseId;
   height: number;
   variant?: ScreenVariant;
   /** Replaces the built-in screen content. */
   children?: ReactNode;
+  /** The photo is on screen when the page loads. It loads at once, not lazily, so it does not delay the page's largest paint. */
+  aboveTheFold?: boolean;
 }) {
   const device = findDevice(id);
   if (!device?.frameImage || !device.frameScreen) return null;
@@ -86,7 +89,16 @@ export function DevicePhoto({
   const width = height / screen.aspect;
   return (
     <div className="relative" style={{ width, height }}>
-      <Image src={device.frameImage} alt="" aria-hidden="true" fill unoptimized sizes={`${Math.round(width)}px`} className="object-contain" />
+      <Image
+        src={device.frameImage}
+        alt=""
+        aria-hidden="true"
+        fill
+        unoptimized
+        loading={aboveTheFold ? "eager" : "lazy"}
+        sizes={`${Math.round(width)}px`}
+        className="object-contain"
+      />
       <div
         className="absolute overflow-hidden rounded-[4%]"
         style={{
